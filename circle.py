@@ -7,7 +7,8 @@ import matplotlib
 class DraggableCircle(matplotlib.patches.Circle):
     lock = None  # only one can be animated at a time
     def __init__(self, sample, center, radius, **kwargs):
-        matplotlib.patches.Circle.__init__(self,center,radius,**kwargs)
+        matplotlib.patches.Circle.__init__(self,center,radius,zorder=10,
+                                           **kwargs)
         #keep a pointer to corresponding sample
         self.sample = sample
 
