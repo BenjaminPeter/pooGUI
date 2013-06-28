@@ -2,12 +2,14 @@ import Tkinter as tk
 from circle import *
 class SampleUI(tk.Frame):
     """this class represens a single sample with use checkbox, label, x and y coords"""
-    def __init__(self, master=None, text="Sample",x=0,y=0):
+    def __init__(self, master=None, id=-1,text="Sample",x=0,y=0):
         tk.Frame.__init__(self,master, bd=2,bg="blue")
-
+        
+        #the sample id. Should be the index of self in PooGUI.sList
+        self.id = id
         #coordinates in integers
-        self.x = x
-        self.y = y
+        self.x = float(x)
+        self.y = float(y)
         self.name = text
         #coordinates as strings, bound to xbox, ybox
         self.tX, self.tY = tk.StringVar(), tk.StringVar()
@@ -117,5 +119,5 @@ class SampleUI(tk.Frame):
 
     def redrawHyperbolas(self):
         for h in self.hyperbolas:
-            h.redraw(D=)
+            h.redraw()
         self.circ.figure.canvas.draw()
