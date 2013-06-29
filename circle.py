@@ -105,6 +105,7 @@ class DraggableCircle(matplotlib.patches.Circle):
         # redraw the full figure
         self.sample.x, self.sample.y = self.center
         self.sample.redrawHyperbolas()
+        self.sample.redrawPsiLines()
         self.figure.canvas.draw()
 
     def disconnect(self):
@@ -118,6 +119,9 @@ class DraggableCircle(matplotlib.patches.Circle):
 
     def show(self):
         self.set_visible(True)
+
+    def redraw(self):
+        self.center = self.sample.x, self.sample.y
 
 dbx, dbxp = 0,0
 if False:

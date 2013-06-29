@@ -36,13 +36,17 @@ class SampleUI(tk.Frame):
 
 
         #the corresponding plot elements:
-        #   - circ is the circle that is drawn
+        #   - circH is the circle that is drawn on hyperbola plot
+        #   - circP is the circle that is drawn on PWPsi plot
         #   - hyperbolas are the hyperbolas associated with this
-        self.circ = DraggableCircle(self,(x,y),1)
-        self.circ.sample = self
+        self.circH = DraggableCircle(self,(x,y),1)
+        self.circP = DraggableCircle(self,(x,y),1)
+        self.circH.sample = self
+        self.circP.sample = self
 
 
         self.hyperbolas = []
+        self.psi_lines = []
 
     def is_active(self):
         return self.active.get()
@@ -67,18 +71,22 @@ class SampleUI(tk.Frame):
         #if x changed...
         if ele == str(self.tX):
             self.x = float(val.get())
-            self.circ.center = (self.x,self.circ.center[1])
+            self.circH.center = (self.x,self.circH.center[1])
+            self.circP.center = (self.x,self.circP.center[1])
             print "cbx"
         #if y changed
         elif ele == str(self.tY):
             self.y = float(val.get())
-            self.circ.center = (self.circ.center[0],self.y)
+            self.circP.center = (self.circP.center[0],self.y)
             print "cby"
         else: print "NO"
 
         #redraw, whole thing, there might be a more efficient way to do this
         self.redrawHyperbolas()
-        self.circ.figure.canvas.draw()
+        self.redrawPsiLines()
+        PooGui.activeCanvas.redraw()
+        #self.circH.figure.canvas.draw()
+        #self.circP.figure.canvas.draw()
         #self.drawCoords()
         #self.circ.center = (float(x)
       
@@ -103,21 +111,38 @@ class SampleUI(tk.Frame):
             self.hide()
 
     def hide(self):
-        canvas = self.circ.figure.canvas
-        print "CANVVAS", canvas
-        self.circ.hide()
+        canvasH = self.circH.figure.canvas
+        canvasP = self.circP.figure.canvas
+        print "CANVVAS", canvasH, canvasP
+        self.circH.hide()
+        self.circP.hide()
         for h in self.hyperbolas:
             h.set_visible(False)
-        canvas.draw()
+        for l in self.psi_lines:
+            l.set_visible(False)
+        canvasH.draw()
+        canvasP.draw()
 
     def show(self):
-        canvas = self.circ.figure.canvas
-        self.circ.show()
+        canvasH = self.circH.figure.canvas
+        canvasP = self.circP.figure.canvas
+        self.circH.show()
+        self.circP.show()
         for h in self.hyperbolas:
             h.show()
-        canvas.draw()
+        for l in self.psi_lines:
+            l.show()
+        canvasH.draw()
+        canvasP.draw()
 
     def redrawHyperbolas(self):
         for h in self.hyperbolas:
             h.redraw()
-        self.circ.figure.canvas.draw()
+
+    def redrawPsiLines(self):
+        for l in self.psi_lines:
+            l.redraw()
+
+    def redrawCircles(self):
+        self.circH.redraw()
+        self.circP.redraw()

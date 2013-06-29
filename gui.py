@@ -9,6 +9,7 @@ import tkMessageBox, tkFileDialog
 from circle import *
 from SampleUI import SampleUI
 from hyperbola import Hyperbola
+from PWPsiLine import PWPsiLine
 from matrix import SimpleTable
 from StatusBar import StatusBar
 from PlotCanvas import PlotCanvas
@@ -33,6 +34,8 @@ class PooGUI(tk.Frame):
             -v: constant multiplier of hyperbolas
             -xlim, ylim: plotting limits
         """
+    #active canvas for redrawing
+    activeCanvas = None
 #---------------------------------------------------------------------
 #   drawing stuff for points, should eventually be moved to an 
 #       appropriate plotting class
@@ -44,7 +47,7 @@ class PooGUI(tk.Frame):
         nCoords = self.coords.shape[0]
         for sampleUI in self.sList:
             sampleUI.destroy()
-        self.sList, self.hList = [], []
+        self.sList, self.hList, self.pList = [], [], []
         self.sampNameDict = {}
         for i in range(nCoords):
             self.sList.append( SampleUI(self.sample_frame,
@@ -52,13 +55,16 @@ class PooGUI(tk.Frame):
                                         x = self.coords[i,1],
                                         y=self.coords[i,2] ))
             self.sList[i].grid(column=0,row=i, sticky="ew")
-            self.canvas.panel.add_patch(self.sList[i].circ)
-            self.sList[i].circ.connect()
+            self.canvasH.panel.add_patch(self.sList[i].circH)
+            self.canvasPsi.panel.add_patch(self.sList[i].circP)
+            self.sList[i].circH.connect()
+            self.sList[i].circP.connect()
 
             self.sampNameDict[self.sList[i].name] = i
 
-    def drawCoords(self):
-        self.canvas.redraw()
+            self.lwd, self.threshold = 1,0
+
+
 
     def changeV(self,ele,val):
         """ 
@@ -69,10 +75,35 @@ class PooGUI(tk.Frame):
         self.v = float( val.get() )
         #redraw, whole thing, there might be a more efficient way to do this
         self.redrawHyperbolas()
-        self.canvas.redraw()
-        #self.drawCoords()
-        #self.circ.center = (float(x)
+        if self.activeCanvas == self.canvasH:
+            self.activeCanvas.redraw()
+
+    def changeLwd(self,val):
+        """ 
+        function that updates hyperbola when v is changed
+        """
+
+        print "Changing lwd" , val.get()
+        #see if the value is actually a float, if not, return
+        self.lwd = float( val.get() )
+        #redraw, whole thing, there might be a more efficient way to do this
+        self.redrawPsiLines()
+        if self.activeCanvas ==self.canvasPsi:
+            self.activeCanvas.redraw()
       
+    def changeThreshold(self,val):
+        """ 
+        function that updates hyperbola when v is changed
+        """
+
+        print "Changing threshold" , val.get()
+        #see if the value is actually a float, if not, return
+        self.threshold = float( val.get() )
+        #redraw, whole thing, there might be a more efficient way to do this
+        self.redrawPsiLines()
+
+        if self.activeCanvas ==self.canvasPsi:
+            self.activeCanvas.redraw()
 #---------------------------------------------------------------------
 #   optimizing
 #---------------------------------------------------------------------
@@ -99,19 +130,24 @@ class PooGUI(tk.Frame):
             for j in xrange(i+1,len(self.coords)):
 #        i,j = 0,1
                 psi = self.psiDict[i,j]
-                h = Hyperbola(self.canvas.panel,self.sList[i], self.sList[j], self.v,psi)
+                h = Hyperbola(self.canvasH.panel,self.sList[i], self.sList[j], self.v,psi)
                 #h = matplotlib.lines.Line2D(np.arange(0,100),np.random.normal(50,10,size = 100))
                 self.sList[i].hyperbolas.append(h)
                 self.sList[j].hyperbolas.append(h)
                 self.hList.append(h)
                 
-                self.canvas.panel.add_line(h)
+                self.canvasH.panel.add_line(h)
                 
-        self.canvas.redraw()
+        if self.activeCanvas == self.canvasH:
+            self.activeCanvas.redraw()
 
     def redrawHyperbolas(self):
         for h in self.hList:
             h.redraw(v = self.v)
+
+    def redrawPsiLines(self):
+        for l in self.pList:
+            l.redraw(weight=self.lwd, threshold=self.threshold)
 
 #---------------------------------------------------------------------
 #   drawing stuff for pw psi, should eventually be 
@@ -127,15 +163,16 @@ class PooGUI(tk.Frame):
             for j in xrange(i+1,len(self.coords)):
 #        i,j = 0,1
                 psi = self.psiDict[i,j]
-                h = PWPsiLine(self.canvas.panel,self.sList[i], self.sList[j], psi)
-                #h = matplotlib.lines.Line2D(np.arange(0,100),np.random.normal(50,10,size = 100))
-                self.sList[i].hyperbolas.append(h)
-                self.sList[j].hyperbolas.append(h)
-                self.hList.append(h)
+                l = PWPsiLine(self.canvasH.panel,
+                              self.sList[i], self.sList[j], psi)
+                self.sList[i].psi_lines.append(l)
+                self.sList[j].psi_lines.append(l)
+                self.pList.append(l)
                 
-                self.canvas.panel.add_line(h)
+                self.canvasPsi.panel.add_line(l)
                 
-        self.canvas.redraw()
+        if self.canvasPsi == self.activeCanvas:
+            self.canvasPsi.redraw()
 
 
 #------------------------------------Hyperbola---------------------------------
@@ -153,7 +190,7 @@ class PooGUI(tk.Frame):
 
         self.coords = np.loadtxt(f,dtype="S100")
         self.setCoords()
-        self.drawCoords()
+        self.activeCanvas.redraw()
         self.nCoords = len(self.coords)
 
     def loadPsi(self,f=None):
@@ -182,7 +219,7 @@ class PooGUI(tk.Frame):
             raise ValueError("could not read image file, see"+ \
                              " matplotlib.image.imread for"+ \
                              " supported formats")
-        self.canvas.addBGI(self.bgi)
+        self.canvasH.addBGI(self.bgi)
         self.canvasPsi.addBGI(self.bgi)
 
         
@@ -223,8 +260,10 @@ class PooGUI(tk.Frame):
 
         menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="View", menu=menu)
-        menu.add_command(label="Hyperbolas", command=self.canvas.show)
-        menu.add_command(label="Pairwise Psi", command=self.canvas.hide)
+        menu.add_command(label="Hyperbolas", 
+                         command=self.showHyperbolaCanvas)
+        menu.add_command(label="Pairwise Psi", 
+                         command=self.showPsiCanvas)
 
         menu = tk.Menu(self.menubar, tearoff=0)
         self.menubar.add_cascade(label="Run", menu=menu)
@@ -244,10 +283,12 @@ class PooGUI(tk.Frame):
         master: parent frame
         active: is this displayed on startup?
         """
-        self.canvas = PlotCanvas(master, width=300, height=300)
-        self.canvas.grid(column=0,row=0,rowspan=2,sticky="ewns")
+        self.canvasH = PlotCanvas(master, width=300, height=300)
+        self.canvasH.grid(column=0,row=0,rowspan=2,sticky="ewns")
         if not active:
-            self.canvas.hide()
+            self.canvasH.hide()
+        else:
+            self.activeCanvas = self.canvasH
 
     def initCanvasPairwisePsi(self,master, active=False):
         """
@@ -256,11 +297,12 @@ class PooGUI(tk.Frame):
         master: parent frame
         active: is this displayed on startup?
         """
-        return
         self.canvasPsi = PlotCanvas(master, width=300, height=300)
         self.canvasPsi.grid(column=0,row=0,rowspan=2,sticky="ewns")
         if not active:
-            self.canvas.hide()
+            self.canvasPsi.hide()
+        else:
+            self.activeCanvas = self.canvasPsi
 
     def initStatusbar(self,master):
         """function that creates a status bar at the bottom of the window"""
@@ -269,7 +311,7 @@ class PooGUI(tk.Frame):
     
     def initSliderFrame(self,master):
         self.v = 100
-        self.slider_frame = SliderFrame(master, v=self.v,bg="pink")
+        self.slider_frame = SliderFrame(master,self, v=self.v,bg="pink")
         self.slider_frame.grid(column=1, row=0, sticky="")
     
     def initSampleFrame(self,master):
@@ -313,6 +355,7 @@ class PooGUI(tk.Frame):
         tk.Grid.columnconfigure(self,0,weight=2)
 
 
+
 #---------------------------------------------------------------------
 #   other stuff
 #---------------------------------------------------------------------
@@ -322,6 +365,23 @@ class PooGUI(tk.Frame):
         root.quit()
         root.destroy()
 
+    def showPsiCanvas(self):
+        print "ABC"
+        self.canvasH.hide()
+        self.canvasPsi.show()
+        self.activeCanvas = self.canvasPsi
+        for s in self.sList:
+            s.redrawCircles()
+        self.activeCanvas.redraw()
+
+    def showHyperbolaCanvas(self):
+        print "CDFF"
+        self.canvasH.show()
+        self.activeCanvas = self.canvasH
+        self.canvasPsi.hide()
+        for s in self.sList:
+            s.redrawCircles()
+        self.activeCanvas.redraw()
         
 root = tk.Tk()
 
