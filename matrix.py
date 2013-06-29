@@ -97,7 +97,13 @@ if __name__ == "__main__":
     app = ExampleApp()
     app.mainloop()
 
-
+class MatrixLabel(tk.Frame):
+    """
+        the labels of the statistics matrix
+    """
+    def __init__(self,master, value="", **kwargs):
+        tk.Frame.__init__(self, master, background="grey",**kwargs)
+        self.label = tk.Label(self, text = "bla")
 class MatrixEntry(tk.Frame):
     """
         a class for a single entry in the data matrix. It should contain an edit with an attached doubleVar
