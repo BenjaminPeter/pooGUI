@@ -240,6 +240,8 @@ class PooGUI(tk.Frame):
         self.matrixTL = tk.Toplevel(master)
         self.psiMat = SimpleTable(self.matrixTL)
         self.psiMat.grid()
+        self.psiMat.fill(self)
+        "psi filled"
 
     def initMenubar(self):
         """
