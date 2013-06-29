@@ -19,9 +19,15 @@ class SimpleTable(tk.Frame):
             self.nRows=1
             self.nCols=1
             entry = MatrixEntry(self, value=0, borderwidth=0, width=10)
-            entry.grid(row=0, column=0, sticky="nsew", padx=1, pady=1)
+            entry.grid(row=1, column=1, sticky="nsew", padx=1, pady=1)
             print "Matirx: 0,0"
             self._widgets = [[entry]]
+            self._topleftCell = MatrixLabel(self)
+            self._topleftCell.grid(row=0, column=0, sticky="nsew")
+            self._rowLabels = [MatrixLabel(self)]
+            self._colLabels = [MatrixLabel(self)]
+            self._colLabels[0].grid(row=0, column=1, sticky="nsew")
+            self._rowLabels[0].grid(row=1, column=0, sticky="nsew")
 
             self.addRows(rows-1)
             self.addCols(columns-1)
@@ -73,11 +79,14 @@ class SimpleTable(tk.Frame):
             for j in xrange(self.nCols):
                 entry = MatrixEntry(self, value=0, 
                                     borderwidth=0, width=10)
-                entry.grid(row=self.nRows+i, column=j, sticky="nsew", 
+                entry.grid(row=self.nRows+i+1, column=j+1,
+                           sticky="nsew", 
                            padx=1, pady=1)
-                print "Matrix: %s/%s - %s/%s"%(self.nRows+i, j, self.nRows,self.nCols)
                 newRow.append(entry)
                 self._widgets.append(newRow)
+                lab = MatrixLabel(self)
+                self._rowLabels.append(lab)
+                lab.grid(row=self.nRows+i+1, column=0)
         self.nRows +=n
 
 
@@ -86,10 +95,13 @@ class SimpleTable(tk.Frame):
             for j in xrange(n):
                 entry = MatrixEntry(self, value=0, 
                                     borderwidth=0, width=10)
-                entry.grid(row=i, column=self.nCols+j, sticky="nsew", 
+                entry.grid(row=i+1, column=self.nCols+j+1,
+                           sticky="nsew", 
                            padx=1, pady=1)
-                print "Matrix: %s/%s - %s/%s"%(i, self.nCols+j, self.nRows,self.nCols)
                 self._widgets[i].append(entry)
+                lab = MatrixLabel(self)
+                self._colLabels.append(lab)
+                lab.grid(column=self.nCols+j+1, row=0)
         self.nCols +=n
 
 
@@ -104,6 +116,8 @@ class MatrixLabel(tk.Frame):
     def __init__(self,master, value="", **kwargs):
         tk.Frame.__init__(self, master, background="grey",**kwargs)
         self.label = tk.Label(self, text = "bla")
+        self.label.pack()
+
 class MatrixEntry(tk.Frame):
     """
         a class for a single entry in the data matrix. It should contain an edit with an attached doubleVar
@@ -145,7 +159,6 @@ class MatrixEntry(tk.Frame):
         self.text = "%2.4f"%self.value 
         self.edit.delete(0,tk.END)
         self.edit.insert(0, self.text)
-        print "set", x
 
     def setColor(self, x):
         self.edit.configure(bg=x)

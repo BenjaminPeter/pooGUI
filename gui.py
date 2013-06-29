@@ -239,7 +239,7 @@ class PooGUI(tk.Frame):
         pass
         self.matrixTL = tk.Toplevel(master)
         self.psiMat = SimpleTable(self.matrixTL)
-        self.psiMat.grid()
+        self.psiMat.grid(sticky="nsew")
         self.psiMat.fill(self)
         "psi filled"
 
@@ -392,7 +392,7 @@ app = PooGUI(root)
 app.loadCoords("data.test.loc")
 app.loadPsi("data.test.psi")
 app.loadBGI("ch2.png")
-app.v = 200
+app.v = 100
 app.drawAllHyperbolas()
 app.drawAllPairwisePsi()
 app.grid()
