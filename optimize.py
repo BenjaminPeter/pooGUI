@@ -2,6 +2,8 @@
 import numpy as np
 import scipy.optimize as spo
 import scipy as sp
+
+debug_psi , debug_data = 0,0
  
 def tdoa3(rawData, rowsToKeep="ALL",**kwargs):
     """
@@ -47,16 +49,18 @@ def tdoa3(rawData, rowsToKeep="ALL",**kwargs):
 #    rawData = np.loadtxt(path)
  
     if rowsToKeep=="ALL":
-        rowsToKeep = xrange(len(rawData))
+        rowsToKeep = range(len(rawData))
         print rowsToKeep
     if len(rowsToKeep) < 4:
         raise ValueError("Too little data")
  
-    psi = rawData[rowsToKeep,4]
-    data = rawData[rowsToKeep][:,[0,1,2,3]]
+    psi = rawData[:,4]
+    data = rawData[:,:4]
+    debug_psi, debug_data = psi, data
     f = makeErrorFunction(psi,data)
  
-    estimates = spo.leastsq(f,full_output=1,Dfun=makeJacobianFunction(data),**kwargs)
+    #estimates = spo.leastsq(f,full_output=1,Dfun=makeJacobianFunction(data),**kwargs)
+    estimates = spo.leastsq(f,full_output=1,**kwargs)
     mse=sum(estimates[2]['fvec']**2)
  
-    return estimates, mse
+    return estimates, mse,psi, data

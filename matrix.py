@@ -32,6 +32,10 @@ class SimpleTable(tk.Frame):
             self.addRows(rows-1)
             self.addCols(columns-1)
 
+
+            self.columnconfigure(0, weight=1)
+            self.rowconfigure(0, weight=1)
+
         self.initMenubar()
 
     def set(self, row, column, value):
@@ -48,29 +52,46 @@ class SimpleTable(tk.Frame):
         self.menubar = tk.Menu(self)
 
         menu = tk.Menu(self.menubar, tearoff=0)
-        self.menubar.add_cascade(label="Statistic", menu=menu)
+        self.menubar.add_cascade(label="Statistic top/right", menu=menu)
         menu.add_command(label="Directionality Index")
         menu.add_command(label="Z - Score (Binomial test)")
         menu.add_command(label="Z - Score (Block Jackknife)")
         menu.add_command(label="Diff in Heterozygosity")
         menu.add_command(label="FST")
 
-        self.menubar.add_cascade(label="Order", menu=menu)
+        self.menubar.add_cascade(label="Statistic bottom/left", menu=menu)
+        menu.add_command(label="Directionality Index")
+        menu.add_command(label="Z - Score (Binomial test)")
+        menu.add_command(label="Z - Score (Block Jackknife)")
+        menu.add_command(label="Diff in Heterozygosity")
+        menu.add_command(label="FST")
+
+        self.menubar.add_cascade(label="Sort", menu=menu)
         menu.add_command(label="Default")
+        menu.add_command(label="Cluster")
         menu.add_command(label="Statistic")
 
 
         self.master.config(menu=self.menubar)
         print "SimpleTable.initMenubar: end"
 
+    def fillLabels(self, src):
+        print len(self._colLabels), len(self._rowLabels)
+        for pop in src.popOrder:
+            i = src.popOrder[pop]
+            self._colLabels[i].set(pop.name)
+            self._rowLabels[i].set(pop.name)
+
     def fill(self, src):
-        for i in src.psiDict:
-            print i
-            self.set(int(i[0]), int(i[1]), src.psiDict[i])
-            if src.psiDict[i] < 0:
-                self.setColor(int(i[0]), int(i[1]), "#ffaaaa")
-            if src.psiDict[i] > 0:
-                self.setColor(int(i[0]), int(i[1]), "#aaffaa")
+        for p1,p2 in src.psi:
+            i, j = src.popOrder[p1], src.popOrder[p2]
+            if j < i:
+                i,j = j,i
+            self.set(i,j, src.psi[p1,p2])
+            if src.psi[p1,p2] < 0:
+                self.setColor(i,j, "#ffaaaa")
+            if src.psi[p1,p2] > 0:
+                self.setColor(i,j, "#aaffaa")
 
 
     def addRows(self,n=1):
@@ -84,9 +105,9 @@ class SimpleTable(tk.Frame):
                            padx=1, pady=1)
                 newRow.append(entry)
                 self._widgets.append(newRow)
-                lab = MatrixLabel(self)
-                self._rowLabels.append(lab)
-                lab.grid(row=self.nRows+i+1, column=0)
+            lab = MatrixLabel(self,"blaa")
+            lab.grid(row=self.nRows+i+1, column=0, sticky="nsew")
+            self._rowLabels.append(lab)
         self.nRows +=n
 
 
@@ -99,9 +120,10 @@ class SimpleTable(tk.Frame):
                            sticky="nsew", 
                            padx=1, pady=1)
                 self._widgets[i].append(entry)
-                lab = MatrixLabel(self)
-                self._colLabels.append(lab)
-                lab.grid(column=self.nCols+j+1, row=0)
+        for j in xrange(n):
+            lab = MatrixLabel(self,"Blluuu%d"%i)
+            self._colLabels.append(lab)
+            lab.grid(column=self.nCols+j+1, row=0, sticky="nsew")
         self.nCols +=n
 
 
@@ -114,9 +136,17 @@ class MatrixLabel(tk.Frame):
         the labels of the statistics matrix
     """
     def __init__(self,master, value="", **kwargs):
-        tk.Frame.__init__(self, master, background="grey",**kwargs)
-        self.label = tk.Label(self, text = "bla")
-        self.label.pack()
+        tk.Frame.__init__(self, master, background="blue",
+                           **kwargs)
+        self.text = tk.StringVar()
+        self.label = tk.Label(self, textvariable = self.text, bg="pink", anchor = tk.CENTER, font="bold")
+        self.text.set(value)
+        self.label.grid(sticky="nsew")
+        self.columnconfigure(0,weight=1)
+        self.rowconfigure(0,weight=1)
+
+    def set(self, x):
+        self.text.set(x)
 
 class MatrixEntry(tk.Frame):
     """
@@ -156,9 +186,7 @@ class MatrixEntry(tk.Frame):
 
     def set(self, x):
         self.value = x
-        self.text = "%2.4f"%self.value 
-        self.edit.delete(0,tk.END)
-        self.edit.insert(0, self.text)
+        self.text.set("%2.4f"%self.value)
 
     def setColor(self, x):
         self.edit.configure(bg=x)

@@ -23,25 +23,24 @@ class Hyperbola(matplotlib.lines.Line2D):
         return lambda x,y: A*x+B*y-C
 
 
-    def __init__(self,ax,F1,F2,v, psi,nPts=500,xlim=(0,100), ylim=(0,100), **kwargs):
+    def __init__(self,ax,F1,F2,vObj, psiObj,nPts=100, **kwargs):
         self.F1 = F1
         #self.F1.hyperbolas.append(self)
         self.F2 = F2
         #self.F2.hyperbolas.append(self)
-        self.v = v
-        if F1[0] < F2[0]:
-            self.psi = psi 
-        else:
-            #self.F1, self.F2 = self.F2, self.F1
-            self.psi = -psi
-        self.D = v*self.psi
+        #vObj is the object e.g. PooGui, whose property v is the
+        #multiplier for psi
+        self.vObj = vObj
+        if F1[0] > F2[0] or (F1[0] == F2[0] and F1[1] > F2[1]):
+            self.F1, self.F2 = self.F2, self.F1
+        self.psi=psiObj[self.F1.pop, self.F2.pop]
+        self.D = vObj.v*self.psi
         self.nPts = nPts
-        self.xlim = xlim
-        self.ylim = ylim
         self.ax = ax
 
         
         vv = self.getCoords()    
+        print F1[0], F2[0]
         matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)
 
 
@@ -67,8 +66,6 @@ class Hyperbola(matplotlib.lines.Line2D):
 #        gX,gY = X,Y
 
     def getCoords(self):
-        xmin, xmax = self.xlim
-        ymin, ymax = self.ylim
 
         a = self.D/2
         c = self.dist(self.F1, self.F2)/2
@@ -80,7 +77,7 @@ class Hyperbola(matplotlib.lines.Line2D):
         else:
             alpha = np.pi/2
 
-        t = np.arange(-2*np.pi, 2*np.pi,0.01)
+        t = np.arange(-2*np.pi, 2*np.pi,0.1)
         x = a * np.cosh(t)
         y = b * np.sinh(t)
 
@@ -98,25 +95,19 @@ class Hyperbola(matplotlib.lines.Line2D):
 
 
 
-    def redraw(self,F1=None, F2=None, v=None,psi=None,xlim=None,ylim=None):
+    def hupdate(self,F1=None, F2=None,psi=None):
         # first, update everything
         if F1 is not None:
             self.F1 = F1
         if F2 is not None:
             self.F2 = F2
-        if v is not None:
-            self.v = v
-            self.D = self.v * self.psi
         if psi is not None:
             self.psi = psi
-            self.D = self.v * self.psi
-        if xlim is not None:
-            self.xlim = xlim
-        if ylim is not None:
-            self.ylim = ylim
+        self.D = self.vObj.v * self.psi
         
-        print "HYPERREDRAW:",(self.F1[0],self.F1[1]), (self.F2[0],self.F2[1]) ,self.v * self.psi
-        #then, redraw
+#        print "PREH", type(self.F1)
+#        print "HYPERREDRAW:",(self.F1[0],self.F1[1]), (self.F2[0],self.F2[1]) ,self.vObj.v * self.psi
+        #then, update
 #        background = canvas.copy_from_bbox(self.ax.bbox)
         v = self.getCoords()
         self.set_xdata(v[:,0])
@@ -132,6 +123,19 @@ class Hyperbola(matplotlib.lines.Line2D):
         if self.F1.is_active() and self.F2.is_active():
             print "hide hyp"
             self.set_visible(True)
+
+    def on_press(self):
+        """called when we want to animate the line for moving"""
+        self.set_animated(True)
+
+    def on_release(self):
+        self.set_animated(False)
+
+    def on_motion(self):
+        v = self.getCoords()
+        self.set_xdata(v[:,0])
+        self.set_ydata(v[:,1])
+
 if False:
     fig = plt.figure()
     ax = fig.add_subplot(111)

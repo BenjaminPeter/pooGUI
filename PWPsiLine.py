@@ -18,19 +18,19 @@ class PWPsiLine(matplotlib.lines.Line2D):
         return lambda x,y: A*x+B*y-C
 
 
-    def __init__(self,ax,F1,F2, psi,weight=1, threshold=0, xlim=(0,100), ylim=(0,100), **kwargs):
+    def __init__(self,ax,F1,F2, psiObj,weight=1, threshold=0, **kwargs):
         """creates a pairwise psi line. the convention here is that the line is always left to right"""
         self.F1 = F1
         self.F2 = F2
-        if F1[0] < F2[0]:
-            self.psi = psi 
-        else:
+        print "init: %f>%f or %f>%f"%(self.F1[0], self.F2[0], self.F1[1], self.F2[1])
+        if self.F1[0] > self.F2[0] or \
+           (self.F1[0] == self.F2[0] and self.F1[1] > self.F2[1]):
+            print "turning"
             self.F1, self.F2 = self.F2, self.F1
-            self.psi = -psi
+        self.psiObj = psiObj
+        psi=psiObj[self.F1.pop,self.F2.pop]
         self.weight = weight
         self.threshold = threshold
-        self.xlim = xlim
-        self.ylim = ylim
         self.ax = ax
  
         vv = self.getCoords()    
@@ -42,49 +42,52 @@ class PWPsiLine(matplotlib.lines.Line2D):
         if abs(psi) * weight < threshold:
             self.set_visible(False)
 
+        assert self.F1[0] < self.F2[0] or (self.F1[0] == self.F2[0] and self.F1[1] < self.F2[1])
+
 
     def getCoords(self):
+        if self.F1[0] > self.F2[0] or \
+           (self.F1[0] == self.F2[0] and self.F1[1] > self.F2[1]):
+            print "%f>%f or %f>%f"%(self.F1[0], self.F2[0], self.F1[1], self.F2[1])
+            print "SWITCH"
+            self.F1, self.F2 = self.F2,self.F1
+            self.set_color( self.cols[ self.psiObj[self.F1.pop,self.F2.pop]>0] )
 
         coords = np.array([[self.F1[0],self.F1[1]],
                            [self.F2[0],self.F2[1]]])
 
+        assert self.F1[0] < self.F2[0] or \
+           (self.F1[0] == self.F2[0] and self.F1[1] < self.F2[1])
         return coords
 
 
 
 
-    def redraw(self,F1=None, F2=None, psi=None, weight=None, threshold=None, xlim=None,ylim=None):
+    def pupdate(self,F1=None, F2=None,  weight=None, threshold=None):
         # first, update everything
         if F1 is not None:
             self.F1 = F1
         if F2 is not None:
             self.F2 = F2
 
-        if psi is not None:
-            self.psi = psi
         if self.F1[0] > self.F2[0]:
             self.F1, self.F2 = self.F2,self.F1
-            self.psi = -self.psi
-            self.set_color( self.cols[ self.psi>0] )
+            self.set_color( self.cols[ self.psiObj[self.F1.pop,self.F2.pop]>0] )
 
         if threshold is not None:
             self.threshold = threshold
         if weight is not None:
             self.weight = weight
         if weight is not None or threshold is not None:
-            self.set_linewidth(self.weight * self.psi)
-            if self.weight * abs(self.psi) > threshold \
+            self.set_linewidth(self.weight * self.psiObj[self.F1.pop, self.F2.pop])
+            if self.weight * abs(self.psiObj[self.F1.pop,self.F2.pop]) > threshold \
                and self.F1.is_active() and self.F2.is_active():
                 self.set_visible( True)
             else:
                 self.set_visible( False )
-        if xlim is not None:
-            self.xlim = xlim
-        if ylim is not None:
-            self.ylim = ylim
         
-        print "LINEREDRAW: psi: %s, weight: %s (%s) threshold %s"%(self.psi, self.weight, self.psi * self.weight, self.threshold)
-        #then, redraw
+#        print "LINEREDRAW: psi: %s, weight: %s (%s) threshold %s"%(self.psi, self.weight, self.psi * self.weight, self.threshold)
+        #then, update
 #        background = canvas.copy_from_bbox(self.ax.bbox)
         v = self.getCoords()
         self.set_xdata(v[:,0])
@@ -102,3 +105,16 @@ class PWPsiLine(matplotlib.lines.Line2D):
             print "show psi"
             self.set_visible(True)
 
+    def on_press(self):
+        """called when we want to animate the line for moving"""
+        self.set_animated(True)
+
+    def on_release(self):
+        self.set_animated(False)
+
+    def on_motion(self):
+        v = self.getCoords()
+        self.set_xdata(v[:,0])
+        self.set_ydata(v[:,1])
+
+        

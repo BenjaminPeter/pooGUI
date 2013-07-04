@@ -7,7 +7,7 @@ from matplotlib.figure import Figure
 import Tkinter as tk
 import tkMessageBox, tkFileDialog
 from circle import *
-from SampleUI import SampleUI
+from SampleUI import *
 from hyperbola import Hyperbola
 from PWPsiLine import PWPsiLine
 from matrix import SimpleTable
@@ -15,7 +15,12 @@ from StatusBar import StatusBar
 from PlotCanvas import PlotCanvas
 from SampleFrame import SampleFrame
 from SliderFrame import SliderFrame
+from options import O
 import matplotlib.image as mpimg
+from Data import *
+from Population import Population
+from optimize import *
+import optimize
 
   
 class PooGUI(tk.Frame):
@@ -38,31 +43,8 @@ class PooGUI(tk.Frame):
     activeCanvas = None
 #---------------------------------------------------------------------
 #   drawing stuff for points, should eventually be moved to an 
-#       appropriate plotting class
+#       appropriate plotting class,psi, data
 #---------------------------------------------------------------------
-    def setCoords(self):
-        """
-        this function updates the coordinates of the sample points, called on load
-        """
-        nCoords = self.coords.shape[0]
-        for sampleUI in self.sList:
-            sampleUI.destroy()
-        self.sList, self.hList, self.pList = [], [], []
-        self.sampNameDict = {}
-        for i in range(nCoords):
-            self.sList.append( SampleUI(self.sample_frame,
-                                        i,text=self.coords[i,0],
-                                        x = self.coords[i,1],
-                                        y=self.coords[i,2] ))
-            self.sList[i].grid(column=0,row=i, sticky="ew")
-            self.canvasH.panel.add_patch(self.sList[i].circH)
-            self.canvasPsi.panel.add_patch(self.sList[i].circP)
-            self.sList[i].circH.connect()
-            self.sList[i].circP.connect()
-
-            self.sampNameDict[self.sList[i].name] = i
-
-            self.lwd, self.threshold = 1,0
 
 
 
@@ -73,8 +55,8 @@ class PooGUI(tk.Frame):
 
         #see if the value is actually a float, if not, return
         self.v = float( val.get() )
-        #redraw, whole thing, there might be a more efficient way to do this
-        self.redrawHyperbolas()
+        #update, whole thing, there might be a more efficient way to do this
+        self.updateHyperbolas()
         if self.activeCanvas == self.canvasH:
             self.activeCanvas.redraw()
 
@@ -87,7 +69,7 @@ class PooGUI(tk.Frame):
         #see if the value is actually a float, if not, return
         self.lwd = float( val.get() )
         #redraw, whole thing, there might be a more efficient way to do this
-        self.redrawPsiLines()
+        self.updatePsiLines()
         if self.activeCanvas ==self.canvasPsi:
             self.activeCanvas.redraw()
       
@@ -99,8 +81,8 @@ class PooGUI(tk.Frame):
         print "Changing threshold" , val.get()
         #see if the value is actually a float, if not, return
         self.threshold = float( val.get() )
-        #redraw, whole thing, there might be a more efficient way to do this
-        self.redrawPsiLines()
+        #update, whole thing, there might be a more efficient way to do this
+        self.updatePsiLines()
 
         if self.activeCanvas ==self.canvasPsi:
             self.activeCanvas.redraw()
@@ -108,32 +90,36 @@ class PooGUI(tk.Frame):
 #   optimizing
 #---------------------------------------------------------------------
     def optimizeAll(self):
-        nCoords = len( self.coords )
+        nCoords = self.nCoords
         data = np.empty((nCoords * (nCoords -1 ) /2, 5 ))
         row = 0
         for h in self.hList:
             data[row] = h.F1[0], h.F1[1], h.F2[0], h.F2[1], h.psi
             row += 1
-        print data
-        import optimize
-        e = optimize.tdoa3(data,x0=[100,50,50])
+        e,mse,p,d = optimize.tdoa3(data,x0=O["opt_start"])
         print "---------------------"
-        print e
-        return data
+        print e[0]
+        opt = InferredOrigin(x=e[0][1],y=e[0][2])
+        self.canvasH.panel.add_artist( opt.circH )
+        self.canvasPsi.panel.add_artist( opt.circP )
+        opt.circH.connect()
+        opt.circP.connect()
+        self.activeCanvas.redraw()
+        return e[0], mse, p, d
 
 #---------------------------------------------------------------------
 #   drawing stuff for hyperbolas, should eventually be 
 #       moved to an appropriate plotting class
 #---------------------------------------------------------------------
     def drawAllHyperbolas(self):
-        for i in xrange(len(self.coords)-1):
-            for j in xrange(i+1,len(self.coords)):
+        for i, s1 in enumerate(self.sList):
+            for s2 in self.sList[i+1:]:
 #        i,j = 0,1
-                psi = self.psiDict[i,j]
-                h = Hyperbola(self.canvasH.panel,self.sList[i], self.sList[j], self.v,psi)
+                psi = self.psi[s1.pop,s2.pop]
+                h = Hyperbola(self.canvasH.panel, s1, s2, self, self.psi)
                 #h = matplotlib.lines.Line2D(np.arange(0,100),np.random.normal(50,10,size = 100))
-                self.sList[i].hyperbolas.append(h)
-                self.sList[j].hyperbolas.append(h)
+                s1.add_hyperbola(h)
+                s2.add_hyperbola(h)
                 self.hList.append(h)
                 
                 self.canvasH.panel.add_line(h)
@@ -141,13 +127,13 @@ class PooGUI(tk.Frame):
         if self.activeCanvas == self.canvasH:
             self.activeCanvas.redraw()
 
-    def redrawHyperbolas(self):
+    def updateHyperbolas(self):
         for h in self.hList:
-            h.redraw(v = self.v)
+            h.hupdate()
 
-    def redrawPsiLines(self):
+    def updatePsiLines(self):
         for l in self.pList:
-            l.redraw(weight=self.lwd, threshold=self.threshold)
+            l.pupdate(weight=self.lwd, threshold=self.threshold)
 
 #---------------------------------------------------------------------
 #   drawing stuff for pw psi, should eventually be 
@@ -159,14 +145,14 @@ class PooGUI(tk.Frame):
                 should eventually include filters for transitive
                 reduction and mst to be drawn
         """
-        for i in xrange(len(self.coords)-1):
-            for j in xrange(i+1,len(self.coords)):
+        for i, s1 in enumerate(self.sList):
+            for s2 in self.sList[i+1:]:
 #        i,j = 0,1
-                psi = self.psiDict[i,j]
+                psi = self.psi[s1.pop, s2.pop]
                 l = PWPsiLine(self.canvasH.panel,
-                              self.sList[i], self.sList[j], psi)
-                self.sList[i].psi_lines.append(l)
-                self.sList[j].psi_lines.append(l)
+                              s1, s2, self.psi)
+                s1.add_line(l)
+                s2.add_line(l)
                 self.pList.append(l)
                 
                 self.canvasPsi.panel.add_line(l)
@@ -184,27 +170,49 @@ class PooGUI(tk.Frame):
         self.data = np.loadtxt(f)
 
     def loadCoords(self,f=None):
-        """loads Coords and saves them in data"""
+        """loads Coords, creates the corresponding UI elements
+            and the circles for plotting
+        """
+
+        self.popOrder = {}
+
+        #reset everything:
+        for sampleUI in self.sList:
+            sampleUI.destroy()
+        self.sList, self.hList, self.pList = [], [], []
+
         if f is None:
             f = tkFileDialog.askopenfile(mode='r',initialfile="coords.txt")
 
-        self.coords = np.loadtxt(f,dtype="S100")
-        self.setCoords()
+        for i,line in enumerate(open(f)):
+            p = Population()
+            p.load_line(line)
+
+            #popOrder is a dict[Population] => ordering index
+            self.popOrder[ p ] = i
+            sUI = SampleUIWPop(pop=p, master=self.sample_frame)
+            sUI.grid(column=0,row=i, sticky="ew")
+
+            #create plotting circles and register events
+            self.canvasH.panel.add_artist( sUI.circH )
+            self.canvasPsi.panel.add_artist( sUI.circP )
+            sUI.circH.connect()
+            sUI.circP.connect()
+            
+            self.sList.append( sUI )
+
+        self.nCoords = len( self.sList )
         self.activeCanvas.redraw()
-        self.nCoords = len(self.coords)
 
     def loadPsi(self,f=None):
-        """loads Coords and saves them in data"""
+        """loads Psi directly. Assumes Coordinates are already loaded"""
         if f is None:
             f = tkFileDialog.askopenfile(mode='r',initialfile="psi.txt")
 
-        nCoords = 1
+        self.psi = AntiCommutativePWStat(f=pw_psi)
         psiRaw = np.loadtxt(f, dtype="S100")
-        psiDict = {}
         for row in psiRaw:
-            psiDict[self.sampNameDict[row[0]],
-                    self.sampNameDict[row[1]]] = float(row[2])
-        self.psiDict = psiDict
+            self.psi[ row[0], row[1] ] =  float(row[2])
 
         self.initPsiMatrix(self.master)
         
@@ -221,6 +229,11 @@ class PooGUI(tk.Frame):
                              " supported formats")
         self.canvasH.addBGI(self.bgi)
         self.canvasPsi.addBGI(self.bgi)
+
+    def removeBGI(self):
+        self.canvasH.removeBGI()
+        self.canvasPsi.removeBGI()
+        self.activeCanvas.redraw()
 
         
 
@@ -241,6 +254,7 @@ class PooGUI(tk.Frame):
         self.psiMat = SimpleTable(self.matrixTL)
         self.psiMat.grid(sticky="nsew")
         self.psiMat.fill(self)
+        self.psiMat.fillLabels(self)
         "psi filled"
 
     def initMenubar(self):
@@ -313,11 +327,11 @@ class PooGUI(tk.Frame):
     
     def initSliderFrame(self,master):
         self.v = 100
-        self.slider_frame = SliderFrame(master,self, v=self.v,bg="pink")
+        self.slider_frame = SliderFrame(master,self, v=self.v)
         self.slider_frame.grid(column=1, row=0, sticky="")
     
     def initSampleFrame(self,master):
-        self.sample_frame = SampleFrame(master, width=200, heigh=100, bg="green")
+        self.sample_frame = SampleFrame(master, width=200, height=100)
         self.sList = []
         for i in range(4):
             self.sList.append( SampleUI(self.sample_frame,i, text="SS%d"%i) )
@@ -336,7 +350,7 @@ class PooGUI(tk.Frame):
         the square matplotlib canvas on the right and a narrowish bar
         with samples, sliders, etc on the right
         """
-        tk.Frame.__init__(self, master, relief=tk.SUNKEN,bg="purple")
+        tk.Frame.__init__(self, master, relief=tk.SUNKEN)
 
         self.master = master
         self.sampNameDict={}
@@ -357,32 +371,39 @@ class PooGUI(tk.Frame):
         tk.Grid.columnconfigure(self,0,weight=2)
 
 
+        self.loadOptions()
+
+    def loadOptions(self):
+        self.lwd = O['psi_lwd']
+        self.threshold = O['psi_threshold']
+
+
+
+
 
 #---------------------------------------------------------------------
 #   other stuff
 #---------------------------------------------------------------------
     def quit(self):
         """quits app"""
-        print "bla"
+        print "bye"
         root.quit()
         root.destroy()
 
     def showPsiCanvas(self):
-        print "ABC"
         self.canvasH.hide()
         self.canvasPsi.show()
         self.activeCanvas = self.canvasPsi
         for s in self.sList:
-            s.redrawCircles()
+            s.updateCircles()
         self.activeCanvas.redraw()
 
     def showHyperbolaCanvas(self):
-        print "CDFF"
         self.canvasH.show()
         self.activeCanvas = self.canvasH
         self.canvasPsi.hide()
         for s in self.sList:
-            s.redrawCircles()
+            s.updateCircles()
         self.activeCanvas.redraw()
         
 root = tk.Tk()
@@ -391,10 +412,11 @@ app = PooGUI(root)
 #load some data
 app.loadCoords("data.test.loc")
 app.loadPsi("data.test.psi")
-app.loadBGI("ch2.png")
+app.loadBGI("ch.png")
 app.v = 100
 app.drawAllHyperbolas()
 app.drawAllPairwisePsi()
+#e,mse,psi,data = app.optimizeAll()
 app.grid()
 tk.Grid.rowconfigure(root,0,weight=1)
 tk.Grid.columnconfigure(root,0,weight=1)

@@ -1,58 +1,45 @@
-# draggable Circle with the animation blit techniques; see
-# http://www.scipy.org/Cookbook/Matplotlib/Animations
-import numpy as np
-import matplotlib.pyplot as plt
 import matplotlib
-from options import O
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import numpy as np
+
+ev={}
+
+
+def dist(x,y):
+    return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
+
 class Point(matplotlib.lines.Line2D):
     lock = None
-    def __init__(self,sample,center,**kwargs):
+    def __init__(self,x,y,**kwargs):
+        self.x, self.y = x,y
         marker = kwargs.pop('marker','o')
-        markersize = kwargs.pop('markersize',8)
-        markeredgewidth = kwargs.pop('markeredgewith',1.3)        
+        markersize = kwargs.pop('markersize',15)
+        markeredgewidth = kwargs.pop('markeredgewith',2)        
         markeredgecolor = kwargs.pop('markeredgecolor','black')        
         color = kwargs.pop('color','green')
         #picker = kwargs.pop('picker',True)        
-        matplotlib.lines.Line2D.__init__(self,[center[0]],
-                                         [center[1]],
-            marker=marker,
+        matplotlib.lines.Line2D.__init__(self,[x],[y],marker=marker,
             markersize=markersize, 
             markeredgewidth=markeredgewidth,
             markeredgecolor=markeredgecolor,
             color=color, 
             picker=markersize,
             **kwargs)
-
-        #keep a pointer to corresponding sample
-        self.sample = sample
-
-        self.press = None
-        self.background = None
-        self.lines =[]
             
-    def add_line(self,l):
-        self.lines.append(l)
-        
     def connect(self):
         print "CONNECT"
         #self.figure.canvas.mpl_connect('pick_event', self.picked)    
         self.pressEvent = self.figure.canvas.mpl_connect('button_press_event', self.on_press)        
         self.moveEvent = self.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)                
         self.releaseEvent = self.figure.canvas.mpl_connect('button_release_event', self.on_release)   
-
-
-    def disconnect(self):
-        print "DC"
-        self.figure.canvas.mpl_disconnect(self.pressEvent)
-        self.figure.canvas.mpl_disconnect(self.moveEvent)
-        self.figure.canvas.mpl_disconnect(self.releaseEvent)
         
     def on_press(self,event):
         if event.inaxes != self.axes: return
         if Point.lock is not None: return
         contains, attrd = self.contains(event)
         if not contains: return
-        x0, y0 = self.get_xdata(), self.get_ydata()
+        x0, y0 = self.x, self.y
         self.press = x0, y0, event.xdata, event.ydata        
         
         print "pressed:", self.press
@@ -61,17 +48,12 @@ class Point(matplotlib.lines.Line2D):
         canvas = self.figure.canvas
         axes = self.axes
         self.set_animated(True)
-
-        #set all lines/hyperbolas to animated
-        for l in self.lines:
-            l.on_press()
-
+        self.l.set_animated(True)
         canvas.draw()
         self.background = canvas.copy_from_bbox(self.axes.bbox)
         
         axes.draw_artist(self)
-        for l in self.lines:
-            axes.draw_artist(l)
+        axes.draw_artist(self.l)
         
         canvas.blit(axes.bbox)
         
@@ -80,49 +62,50 @@ class Point(matplotlib.lines.Line2D):
         self.press =None
         Point.lock = None
         self.set_animated(False)
-        #unanimate everything
-        for l in self.lines:
-            l.on_release()
+        self.l.set_animated(False)
         self.background = None
         
-        # update the full figure
-        #self.sample.x, self.sample.y = self.center
-        #self.sample.updateHyperbolas()
-        #self.sample.updatePsiLines()
-        #self.figure.canvas.draw()
         
     def on_motion(self,event):
         if Point.lock is not self: return
         if event.inaxes != self.axes: return
         x0, y0, xpress, ypress = self.press
-        
-        if hasattr(self,"sample"):
-            self.sample.x = event.xdata
-            self.sample.y = event.ydata
-            self.sample.tX.set("%2.2f"%(event.xdata))
-            self.sample.tY.set("%2.2f"%(event.ydata))
-        else:
-            raise TypeError("samp not found")
-        self.set_xdata(event.xdata)
+
+        xd = self.l.get_xdata()        
+        yd = self.l.get_ydata()       
+
+        self.set_xdata(event.xdata)        
         self.set_ydata(event.ydata)
-        for l in self.lines:
-            l.on_motion()
+        
+        xd[self.id] = self.get_xdata()
+        yd[self.id] = self.get_ydata()                        
+        self.l.set_xdata(xd)
+        self.l.set_ydata(yd)
         canvas = self.figure.canvas
         
         canvas.restore_region(self.background)
         self.axes.draw_artist(self)
-        for l in self.lines:
-            self.axes.draw_artist(l)
+        self.axes.draw_artist(self.l)        
         canvas.blit(self.axes.bbox)
-        
         return
 
-    def hide(self):
-        self.set_visible(False)
 
-    def show(self):
-        self.set_visible(True)
+        if not contains: return
+        print "moved", self.x
 
-    def _update(self):
-        self.set_xdata(self.sample.x)
-        self.set_ydata(self.sample.y)
+  
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+p1,p2 = Point(.3,.4), Point(.8,.5)
+
+ax1.add_line(p1)
+ax1.add_line(p2)
+l = matplotlib.lines.Line2D([.3,.8],[.4,.5])
+ax1.add_line(l)
+p1.l,p2.l = l,l
+p1.id, p2.id = 0,1
+p1.connect()
+p2.connect()    
+
+fig.show()
+
