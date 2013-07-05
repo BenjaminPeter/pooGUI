@@ -75,23 +75,37 @@ class SimpleTable(tk.Frame):
         self.master.config(menu=self.menubar)
         print "SimpleTable.initMenubar: end"
 
-    def fillLabels(self, src):
-        print len(self._colLabels), len(self._rowLabels)
-        for pop in src.popOrder:
-            i = src.popOrder[pop]
-            self._colLabels[i].set(pop.name)
-            self._rowLabels[i].set(pop.name)
+    def fill_labels(self, sList):
+        """
+            Fills the Matrix labels.
+            @param pop_order: the order where populations are
+            @type pop_order: dict[Population] => order
+        """
+        for i,sample in enumerate(sList):
+            self._colLabels[i].set(sample.name)
+            self._rowLabels[i].set(sample.name)
+            self._colLabels[i].set_color(sample.cstr)
+            self._rowLabels[i].set_color(sample.cstr)
 
-    def fill(self, src):
-        for p1,p2 in src.psi:
-            i, j = src.popOrder[p1], src.popOrder[p2]
-            if j < i:
-                i,j = j,i
-            self.set(i,j, src.psi[p1,p2])
-            if src.psi[p1,p2] < 0:
-                self.setColor(i,j, "#ffaaaa")
-            if src.psi[p1,p2] > 0:
-                self.setColor(i,j, "#aaffaa")
+    def fill(self, sList, stat):
+        """
+            Fills the upper Matrix triangle with a pairwise statistc.
+            @param pop_order: the order where populations are
+            @type pop_order: dict[Population] => order
+            @param stat: the statistic to be filled in
+            @type stat: dict[Population,Population] => statistic
+        """
+        self.stat_upper = stat
+        for i,s1 in enumerate(sList):
+            for j0,s2 in enumerate(sList[i+1:]):
+                j = j0 + i + 1
+                self.set(i,j, stat[s1.pop, s2.pop])
+
+                #some basic coloring
+                if stat[s1.pop,s2.pop] < 0:
+                    self.setColor(i,j, "#ffaaaa")
+                if stat[s1.pop,s2.pop] > 0:
+                    self.setColor(i,j, "#aaffaa")
 
 
     def addRows(self,n=1):
@@ -126,10 +140,12 @@ class SimpleTable(tk.Frame):
             lab.grid(column=self.nCols+j+1, row=0, sticky="nsew")
         self.nCols +=n
 
-
-if __name__ == "__main__":
-    app = ExampleApp()
-    app.mainloop()
+    def update_sample_order(self, sList):
+        """
+            updates the order the sample appear in the Matrix
+        """
+        self.fill_labels(sList)
+        self.fill(sList, self.stat_upper)
 
 class MatrixLabel(tk.Frame):
     """
@@ -147,6 +163,9 @@ class MatrixLabel(tk.Frame):
 
     def set(self, x):
         self.text.set(x)
+
+    def set_color(self,c):
+        self.label.config(bg=c)
 
 class MatrixEntry(tk.Frame):
     """
@@ -191,3 +210,6 @@ class MatrixEntry(tk.Frame):
     def setColor(self, x):
         self.edit.configure(bg=x)
 
+if __name__ == "__main__":
+    app = ExampleApp()
+    app.mainloop()

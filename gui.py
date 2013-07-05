@@ -13,7 +13,7 @@ from PWPsiLine import PWPsiLine
 from matrix import SimpleTable
 from StatusBar import StatusBar
 from PlotCanvas import PlotCanvas
-from SampleFrame import SampleFrame
+from SampleFrame import SampleFrame,Cluster,OriginFrame
 from SliderFrame import SliderFrame
 from options import O
 import matplotlib.image as mpimg
@@ -35,7 +35,6 @@ class PooGUI(tk.Frame):
             -data: the raw SNP data (mbsData obj?)
             -coords: data structure with coordinates
             -psi: np.array[s1,s2] : psi
-            -sampNameDict: dict[sampName] -> sampId
             -v: constant multiplier of hyperbolas
             -xlim, ylim: plotting limits
         """
@@ -90,22 +89,51 @@ class PooGUI(tk.Frame):
 #   optimizing
 #---------------------------------------------------------------------
     def optimizeAll(self):
-        nCoords = self.nCoords
-        data = np.empty((nCoords * (nCoords -1 ) /2, 5 ))
-        row = 0
-        for h in self.hList:
-            data[row] = h.F1[0], h.F1[1], h.F2[0], h.F2[1], h.psi
-            row += 1
-        e,mse,p,d = optimize.tdoa3(data,x0=O["opt_start"])
-        print "---------------------"
-        print e[0]
-        opt = InferredOrigin(x=e[0][1],y=e[0][2])
-        self.canvasH.panel.add_artist( opt.circH )
-        self.canvasPsi.panel.add_artist( opt.circP )
-        opt.circH.connect()
-        opt.circP.connect()
-        self.activeCanvas.redraw()
-        return e[0], mse, p, d
+        ev,msev, pv,dv = [],[],[],[]
+        for cluster in self.clusters:
+            n_pops = cluster.n_pops
+            if n_pops <= 3:
+                print "Warning, Cluster too small"
+            data = np.empty((n_pops * (n_pops -1 ) /2, 5 ))
+            row = 0
+            for i, s1 in enumerate(cluster.pops):
+                for j0, s2 in enumerate(cluster.pops[i+1:]):
+                    j = i+j0 + 1
+                    data[row] = s1.get_x(), s1.get_y(), \
+                                s2.get_x(), s2.get_y(), \
+                                self.psi[s1.pop, s2.pop]
+                    row += 1
+            e,mse,p,d = optimize.tdoa3(data,x0=O["opt_start"])
+            print e[0]
+            ev.append(e[0])
+            msev.append(mse)
+            pv.append(p)
+            dv.append(d)
+
+            if cluster.origin is None:
+                opt = \
+                InferredOrigin(master=self.origin_frame,x=e[0][1],y=e[0][2],
+                               text="Origin "+cluster.name)
+                opt.set_color("red")
+                cluster.origin = opt
+            else:
+                opt = cluster.origin
+                opt.tX.set("%2.2f"%(e[0][1]))
+                opt.tY.set("%2.2f"%(e[0][2]))
+                opt.set_x(e[0][1])
+                opt.set_y(e[0][2])
+                opt.update_()
+                print "UPDATED ORIGN"
+
+            self.oList.append(opt)
+            opt.grid(in_=self.origin_frame)
+            self.canvasH.panel.add_artist( opt.circH )
+            self.canvasPsi.panel.add_artist( opt.circP )
+            #origins shouldn't be movable
+            #opt.circH.connect()
+            #opt.circP.connect()
+            self.activeCanvas.redraw()
+        return ev, msev, pv, dv
 
 #---------------------------------------------------------------------
 #   drawing stuff for hyperbolas, should eventually be 
@@ -169,12 +197,30 @@ class PooGUI(tk.Frame):
         f = tkFileDialog.askopenfile(mode='r')
         self.data = np.loadtxt(f)
 
+#---------------------------- Sorting stuff ------------------------
+#   this set of functions handles all the sorting of elements
+#--------------------------------------------------
+
+
+    def update_sample_order(self):
+        """
+            when the samples are sorted and have to be reordered, this function
+            does it
+        """
+        print "START ORDER"
+        self.sList = sorted(self.sList)
+        self.sample_frame.update_sample_order(self.sList)
+        self.psi_matrix.update_sample_order(self.sList)
+
+#--------------------------------------------------
     def loadCoords(self,f=None):
         """loads Coords, creates the corresponding UI elements
             and the circles for plotting
         """
 
-        self.popOrder = {}
+        #init clusters and make default cluster
+        c = Cluster()
+        self.clusters.add( c )
 
         #reset everything:
         for sampleUI in self.sList:
@@ -188,9 +234,8 @@ class PooGUI(tk.Frame):
             p = Population()
             p.load_line(line)
 
-            #popOrder is a dict[Population] => ordering index
-            self.popOrder[ p ] = i
-            sUI = SampleUIWPop(pop=p, master=self.sample_frame)
+            sUI = SampleUIWPop(pop=p, master=self.sample_frame, cluster=c,
+                               main=self)
             sUI.grid(column=0,row=i, sticky="ew")
 
             #create plotting circles and register events
@@ -214,7 +259,16 @@ class PooGUI(tk.Frame):
         for row in psiRaw:
             self.psi[ row[0], row[1] ] =  float(row[2])
 
+        self.psi_sum = psi_sum_cluster(self.psi,self.sList)
+        for s in self.sList:
+            s.stats['psi_sum'] = self.psi_sum[s.pop]
+
         self.initPsiMatrix(self.master)
+        SampleUI.sortStat = 'psi_sum'
+        self.update_sample_order()
+            
+        #self.set_colors()
+
         
     def loadBGI(self, f=None):
         """loads Background image"""
@@ -249,13 +303,11 @@ class PooGUI(tk.Frame):
             2. load data and display it
             3. colorcode
         """
-        pass
         self.matrixTL = tk.Toplevel(master)
-        self.psiMat = SimpleTable(self.matrixTL)
-        self.psiMat.grid(sticky="nsew")
-        self.psiMat.fill(self)
-        self.psiMat.fillLabels(self)
-        "psi filled"
+        self.psi_matrix = SimpleTable(self.matrixTL)
+        self.psi_matrix.grid(sticky="nsew")
+        self.psi_matrix.fill(self.sList,self.psi)
+        self.psi_matrix.fill_labels(self.sList)
 
     def initMenubar(self):
         """
@@ -300,7 +352,7 @@ class PooGUI(tk.Frame):
         active: is this displayed on startup?
         """
         self.canvasH = PlotCanvas(master, width=300, height=300)
-        self.canvasH.grid(column=0,row=0,rowspan=2,sticky="ewns")
+        self.canvasH.grid(column=0,row=0,rowspan=3,sticky="ewns")
         if not active:
             self.canvasH.hide()
         else:
@@ -314,7 +366,7 @@ class PooGUI(tk.Frame):
         active: is this displayed on startup?
         """
         self.canvasPsi = PlotCanvas(master, width=300, height=300)
-        self.canvasPsi.grid(column=0,row=0,rowspan=2,sticky="ewns")
+        self.canvasPsi.grid(column=0,row=0,rowspan=3,sticky="ewns")
         if not active:
             self.canvasPsi.hide()
         else:
@@ -323,7 +375,7 @@ class PooGUI(tk.Frame):
     def initStatusbar(self,master):
         """function that creates a status bar at the bottom of the window"""
         self.sb = StatusBar(self)
-        self.sb.grid(row=2,column=0,columnspan=2, sticky="ew")
+        self.sb.grid(row=3,column=0,columnspan=2, sticky="ew")
     
     def initSliderFrame(self,master):
         self.v = 100
@@ -332,13 +384,16 @@ class PooGUI(tk.Frame):
     
     def initSampleFrame(self,master):
         self.sample_frame = SampleFrame(master, width=200, height=100)
+        self.origin_frame = OriginFrame(master, width=200, height=100)
         self.sList = []
+        self.oList = []
         for i in range(4):
-            self.sList.append( SampleUI(self.sample_frame,i, text="SS%d"%i) )
+            self.sList.append( SampleUI(master=self.sample_frame,cluster=None, main=self,text="SS%d"%i) )
             self.sList[i].grid(column=0,row=i)
-            self.sampNameDict[self.sList[i].name] = i
         self.sample_frame.grid(column=1, row=1, sticky="ns")
-        #self.sample_frame.pack()
+        self.origin_frame.grid(column=1, row=2, sticky="ns")
+
+
 
     def __init__(self, master=None):
         """the main constructor of the frame. As it is quite big,
@@ -353,7 +408,7 @@ class PooGUI(tk.Frame):
         tk.Frame.__init__(self, master, relief=tk.SUNKEN)
 
         self.master = master
-        self.sampNameDict={}
+        self.clusters = set() 
         
         self.initCanvasHyperbolas(master)
         self.initCanvasPairwisePsi(master, active=True)
@@ -363,7 +418,6 @@ class PooGUI(tk.Frame):
         self.initMenubar()
 
         #enable expansion
-        #tk.Grid.rowconfigure(self,0,weight=1)
         tk.Grid.rowconfigure(self,1,weight=10)
         tk.Grid.rowconfigure(self,2,weight=1)
         tk.Grid.columnconfigure(self,1,weight=1)
@@ -410,15 +464,18 @@ root = tk.Tk()
 
 app = PooGUI(root)
 #load some data
-app.loadCoords("data.test.loc")
+app.loadCoords("data.test2.loc")
 app.loadPsi("data.test.psi")
 app.loadBGI("ch.png")
 app.v = 100
 app.drawAllHyperbolas()
 app.drawAllPairwisePsi()
-#e,mse,psi,data = app.optimizeAll()
+e,mse,psi,data = app.optimizeAll()
 app.grid()
 tk.Grid.rowconfigure(root,0,weight=1)
+tk.Grid.rowconfigure(root,1,weight=1)
 tk.Grid.columnconfigure(root,0,weight=1)
+
+
 
 root.mainloop()

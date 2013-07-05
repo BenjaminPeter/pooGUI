@@ -5,7 +5,12 @@ this class keeps all the options and configurations for the PooGUI program as a 
 O = {}
 
 #the base color(s) of the population circles. Each color is used for a cluster
-O['circle_color'] = ['blue', 'black', 'red', 'purple', 'brown']
+O['cluster_colors'] = [['white','green'], \
+                       ['#ffeeee','orange'], \
+                       ['black','yellow'], \
+                       ['white','blue'], \
+                       ['white','purple']\
+]
 #the radius of the circle (as percentage of total plot with/height)
 O['circle_radius'] = .02
 
@@ -21,6 +26,6 @@ O['opt_start'] = [100,40,40]
 
 #the limits of the plots
 O['xlim'] = (0,200)
-O['ylim'] = (10,90)
+O['ylim'] = (10,130)
 #how the plotting window expands
 

@@ -22,10 +22,8 @@ class PWPsiLine(matplotlib.lines.Line2D):
         """creates a pairwise psi line. the convention here is that the line is always left to right"""
         self.F1 = F1
         self.F2 = F2
-        print "init: %f>%f or %f>%f"%(self.F1[0], self.F2[0], self.F1[1], self.F2[1])
         if self.F1[0] > self.F2[0] or \
            (self.F1[0] == self.F2[0] and self.F1[1] > self.F2[1]):
-            print "turning"
             self.F1, self.F2 = self.F2, self.F1
         self.psiObj = psiObj
         psi=psiObj[self.F1.pop,self.F2.pop]
@@ -62,8 +60,9 @@ class PWPsiLine(matplotlib.lines.Line2D):
 
 
 
-
     def pupdate(self,F1=None, F2=None,  weight=None, threshold=None):
+
+        visible = self.get_visible( )
         # first, update everything
         if F1 is not None:
             self.F1 = F1
@@ -80,13 +79,17 @@ class PWPsiLine(matplotlib.lines.Line2D):
             self.weight = weight
         if weight is not None or threshold is not None:
             self.set_linewidth(self.weight * self.psiObj[self.F1.pop, self.F2.pop])
-            if self.weight * abs(self.psiObj[self.F1.pop,self.F2.pop]) > threshold \
-               and self.F1.is_active() and self.F2.is_active():
-                self.set_visible( True)
-            else:
-                self.set_visible( False )
+
+        if self.weight * abs(self.psiObj[self.F1.pop,self.F2.pop]) > threshold \
+           and self.F1.is_active() and self.F2.is_active():
+            visible = True
+        else:
+            visible = False
         
-#        print "LINEREDRAW: psi: %s, weight: %s (%s) threshold %s"%(self.psi, self.weight, self.psi * self.weight, self.threshold)
+        if self.F1.cluster != self.F2.cluster:
+            visible = False
+        self.set_visible ( visible )
+        #print "LINEREDRAW: psi: %s, weight: %s (%s) threshold %s"%(visible, self.weight, 0, self.threshold)
         #then, update
 #        background = canvas.copy_from_bbox(self.ax.bbox)
         v = self.getCoords()
@@ -95,8 +98,6 @@ class PWPsiLine(matplotlib.lines.Line2D):
 
 
     def hide(self):
-        print "hide psi line",self.ax.figure.canvas
-        self.set_color("red")
         self.set_visible(False)
 
 

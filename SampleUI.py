@@ -2,19 +2,24 @@ import Tkinter as tk
 from circle import *
 from Population import Population
 from options import O
+from SampleFrame import ClusterFrame,Cluster
 
 
 class SampleUI(tk.Frame):
+    sortStat = 'name'
     """this class represens a single sample with use checkbox, label, x and y coords"""
-    def __init__(self, master=None, id=-1,text="Sample",x=0,y=0):
-        tk.Frame.__init__(self,master, bd=2,bg="blue")
+    def __init__(self, master=None, main=None, cluster=None,text="Sample",x=0,y=0, **kwargs):
+        tk.Frame.__init__(self,master, bd=2, **kwargs)
+        self.cluster = None
+        self.main = main
+        self.color = "red"
+        self.cstr = "red"
         
-        #the sample id. Should be the index of self in PooGUI.sList
-        self.id = id
         #coordinates in integers
         self.x = float(x)
         self.y = float(y)
         self.name = text
+        self.stats = {'name': self.name}
         #coordinates as strings, bound to xbox, ybox
         self.tX, self.tY = tk.StringVar(), tk.StringVar()
 
@@ -25,19 +30,10 @@ class SampleUI(tk.Frame):
         self.checkbox = tk.Checkbutton(self,bg="red", command=self.showhide, var=self.active,)
         self.checkbox.select()
         self.label = tk.Label(self,text=text)
-        self.xbox = tk.Entry(self,width=7, textvariable = self.tX)
+        self.xbox = tk.Entry(self,width=4, textvariable = self.tX)
         self.tX.set(x)
-        self.ybox = tk.Entry(self,width=7, textvariable = self.tY)
+        self.ybox = tk.Entry(self,width=4, textvariable = self.tY)
         self.tY.set(y)
-
-
-        #registering events and layout
-        self.tX.trace("w",lambda a,b,c,n=self.xbox:self.moved(a,n))
-        self.tY.trace("w",lambda a,b,c,n=self.ybox:self.moved(a,n))
-        self.checkbox.grid(column=0,row=0)
-        self.label.grid(column=1,row=0)
-        self.xbox.grid(column=2,row=0)
-        self.ybox.grid(column=3,row=0)
 
 
         #the corresponding plot elements:
@@ -49,9 +45,47 @@ class SampleUI(tk.Frame):
         self.circH.sample = self
         self.circP.sample = self
 
+        
+
+        #registering events and layout
+        self.tX.trace("w",lambda a,b,c,n=self.xbox:self.moved(a,n))
+        self.tY.trace("w",lambda a,b,c,n=self.ybox:self.moved(a,n))
+        self.checkbox.grid(column=0,row=0)
+        self.label.grid(column=1,row=0,sticky="nsew")
+        self.xbox.grid(column=2,row=0)
+        self.ybox.grid(column=3,row=0)
+        tk.Grid.columnconfigure(self,1,weight=1)
+
+
+        if cluster != None:
+            cluster.add_pop(self)
+            self.cluster_frame = ClusterFrame(self,self.cluster)
+            self.cluster_frame.grid(in_=self,column=4,row=0)
+
 
         self.hyperbolas = []
         self.psi_lines = []
+
+    def set_color(self, color):
+
+        self.color = color
+        cint = [min(255,c *256) for c in color]
+        cstr =  '#%02x%02x%02x'%tuple(cint[:3])
+        self.cstr = cstr
+        self.config(bg=cstr)
+        self.checkbox.config(bg=cstr)
+        self.label.config(bg=cstr)
+        self.circH.set_color(color)
+        self.circP.set_color(color)
+
+    def set_cluster(self, cluster):
+        if self.cluster is not None:
+            self.cluster.remove_pop(self)
+        self.main.clusters.add(cluster)
+        self.cluster = cluster
+        if hasattr(self, 'cluster_frame'):
+            self.cluster_frame.set_mincol(cluster.mincol)
+            self.cluster_frame.set_maxcol(cluster.maxcol)
 
     def is_active(self):
         return self.active.get()
@@ -59,9 +93,19 @@ class SampleUI(tk.Frame):
     #self[0] and self[1] return x and y
     def __getitem__(self,x):
         if x == 0:
-            return float(self.x)
+            return self.get_x()
         if x == 1:
-            return float(self.y)
+            return self.get_y()
+    def get_x(self):
+        return float(self.x)
+    def get_y(self):
+        return float(self.y)
+    def set_x(self,x):
+        self.x = x 
+    def set_y(self,y):
+        self.y = y
+    def get_name(self):
+        return self.name
     
     #function that is run when the coords of the dot are updated
     def moved(self,ele,val):
@@ -78,14 +122,17 @@ class SampleUI(tk.Frame):
 
         #if x changed...
         if ele == str(self.tX):
-            self.x = float(val.get())
-            self.circH.set_xdata([self.x])
-            self.circP.set_xdata([self.x])
+            x = float(val.get())
+
+            self.set_x( x )
+            self.circH.set_xdata([x])
+            self.circP.set_xdata([x])
         #if y changed
         elif ele == str(self.tY):
-            self.y = float(val.get())
-            self.circH.set_ydata([self.x])
-            self.circP.set_ydata([self.y])
+            y = float(val.get())
+            self.set_y( y )
+            self.circH.set_ydata([y])
+            self.circP.set_ydata([y])
         else: print "NO"
 
         #update, whole thing, there might be a more efficient way to do this
@@ -156,6 +203,17 @@ class SampleUI(tk.Frame):
         self.circH._update()
         self.circP._update()
 
+    def update_(self):
+        self.updateHyperbolas()
+        self.updatePsiLines()
+        self.circH._update()
+        self.circP._update()
+
+        self.circH.figure.canvas.draw()
+        self.circP.figure.canvas.draw()
+        if self.main is not None:
+            self.main.update_sample_order()
+
     def add_line(self,l):
         self.psi_lines.append(l)
         self.circP.add_line(l)
@@ -165,40 +223,53 @@ class SampleUI(tk.Frame):
         self.circH.add_line(h)
 
 
+    ####################################################
+    # sorting stuff and  1 sample statistics
+    ###################################################
+
+    def __lt__(self, other):
+        if self.cluster == other.cluster:
+            return self.stats[SampleUI.sortStat] < \
+                    other.stats[SampleUI.sortStat]
+        else: 
+            return self.cluster < other.cluster
+
+
 class SampleUIWPop(SampleUI):
     """
         simple subclass of SampleUI where x,y, name are replaced by 
         a Population object that can also be used for the class
     """
-    def __init__(self, pop, master=None, id=-1):
+    def __init__(self, pop, master=None, main=None, cluster=None):
         x,y = pop.location[:2] # just use first two locs
         text = pop.name
-        SampleUI.__init__(self,master, id=id, text=text, x=x, y=y)
-        
         self.pop = pop
+        SampleUI.__init__(self,master, cluster=cluster, main=main,text=text, x=x, y=y)
+        
 
-        def __getitem__(self,x):
-            print "SAMPLEUIWPOP.__getitem__", self.pop.location
-            if x==0:
-                return self.pop.location[0]
-            elif x==1:
-                return self.pop.location[1]
+    def get_x(self):
+        return float(self.pop.location[0])
+    def get_y(self):
+        return float(self.pop.location[1])
+    def set_x(self,x):
+        self.pop.location[0] = x 
+    def set_y(self,y):
+        self.pop.location[1] = y
 
-        def moved(self,ele, val):
-            SampleUI.moved(ele,val)
-            self.pop.location[0] = self.x
-            self.pop.location[1] = self.y
+    def get_name(self):
+        return self.pop.name
 
-            #delete x, y created by moved as they are saved in self.pop
-            del self.x
-            del self.y
 
 class InferredOrigin(SampleUI):
     origin_counter = 0
-    def __init__(self, master=None, text="Origin", x=0,y=0):
-        SampleUI.__init__(self,master, text=text, x=x, y=y)
+    def __init__(self, master=None, main=None, cluster=None, text="Origin", x=0,y=0, color="red", **kwargs):
+        SampleUI.__init__(self,master, main=main, cluster=cluster, text=text, x=x, y=y, **kwargs)
         self.circH.set_color("red")
         self.circP.set_color("red")
+        self.circH.set_marker("+")
+        self.circP.set_marker("+")
+        self.circH.set_markeredgecolor("red")
+        self.circP.set_markeredgecolor("red")
         
     """
         class that represents an inferred origin of a group

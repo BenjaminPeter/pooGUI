@@ -1,3 +1,5 @@
+from collections import defaultdict
+from Population import Population
 
 class SimpleStat:
     """
@@ -82,9 +84,31 @@ def pw_psi(v1, v2):
 
         return psi / shared_snp
 
-def psi_sum(v1):
-    """"""
-    pass
+def psi_sum(pw_psi):
+    """
+        returns a SimpleStat object representing the sum of psi for
+        a population, e.g. for ordering purposes
+        @param pw_psi : the pairwise psi vlaues
+        @type pw_psi: a PWStat object
+    """
+    psi = defaultdict( lambda : 0)
+    for p1,p2 in pw_psi:
+        psi[p1] += pw_psi[p1,p2]
+        psi[p2] -= pw_psi[p1,p2]
+
+    return dict(psi)
+
+
+def psi_sum_cluster(pw_psi, sList):
+    psi = defaultdict( lambda : 0)
+    for i,s1 in enumerate(sList):
+        for s2 in sList[i+1:]:
+            if s1.cluster == s2.cluster:
+                psi[s1.pop] += pw_psi[s1.pop, s2.pop]
+                psi[s2.pop] -= pw_psi[s1.pop, s2.pop]
+            else: print s1.cluster, s2.cluster
+    return dict(psi)
+
 
 def mkHeterozygosityFun(n):
     def Heterozygosity(v1):
@@ -94,4 +118,15 @@ def mkHeterozygosityFun(n):
             h += 2*f*(n-f)
         return f/len(v1)
     return Heterozygosity
+
+
+def order(stat ,keyfun=lambda x:x):
+    """
+        returns the order of the elements in a sorted list 
+        @param stat:  the statistic for which the order is to be established
+        @type stat: a SimpleStat object
+    """
+    k, v = stat.keys(), stat.values()
+    if keyfun is None: keyfun = lambda x:x
+    return dict([(i[1][0],i[0]) for i in enumerate(sorted([i for i in stat.iteritems()],key=lambda i: keyfun(i[1])))]) 
 

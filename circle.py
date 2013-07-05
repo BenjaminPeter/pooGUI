@@ -34,7 +34,6 @@ class Point(matplotlib.lines.Line2D):
         self.lines.append(l)
         
     def connect(self):
-        print "CONNECT"
         #self.figure.canvas.mpl_connect('pick_event', self.picked)    
         self.pressEvent = self.figure.canvas.mpl_connect('button_press_event', self.on_press)        
         self.moveEvent = self.figure.canvas.mpl_connect('motion_notify_event', self.on_motion)                
@@ -97,8 +96,8 @@ class Point(matplotlib.lines.Line2D):
         x0, y0, xpress, ypress = self.press
         
         if hasattr(self,"sample"):
-            self.sample.x = event.xdata
-            self.sample.y = event.ydata
+            self.sample.set_x( event.xdata )
+            self.sample.set_y( event.ydata )
             self.sample.tX.set("%2.2f"%(event.xdata))
             self.sample.tY.set("%2.2f"%(event.ydata))
         else:
@@ -124,5 +123,5 @@ class Point(matplotlib.lines.Line2D):
         self.set_visible(True)
 
     def _update(self):
-        self.set_xdata(self.sample.x)
-        self.set_ydata(self.sample.y)
+        self.set_xdata(self.sample.get_x())
+        self.set_ydata(self.sample.get_y())

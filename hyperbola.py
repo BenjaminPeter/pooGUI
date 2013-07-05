@@ -4,23 +4,53 @@ import matplotlib.lines
 import numpy as np
 
 
+class LineBase(matplotlib.lines.Line2D):
 
+    @staticmethod
+    def dist(x,y):
+        return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
+
+    def __init__(self,ax, F1, F2, psiObj, **kwargs):
+        if F1[0] > F2[0] or (F1[0] == F2[0] and F1[1] > F2[1]):
+            self.F1, self.F2 = self.F2, self.F1
+        self.F1 = F1
+        self.F2 = F2
+
+        self.psiObj = psiObj
+        psi=psiObj[self.F1.pop,self.F2.pop]
+
+        self.ax = ax
+
+        vv = self.getCoords()    
+        matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)
+
+
+
+    def hide(self):
+        self.set_visible(False)
+
+    def show(self):
+        if self.F1.is_active() and self.F2.is_active() and \
+           self.F1.cluster == self.F2.cluster:
+            print "hide hyp"
+            self.set_visible(True)
+
+    def on_press(self):
+        self.set_animated(True)
+
+    def on_release(self):
+        self.set_animated(False)
+
+    def on_motion(self):
+        v = self.getCoords()
+        self.set_xdata(v[:,0])
+        self.set_ydata(v[:,1])
 class Hyperbola(matplotlib.lines.Line2D):
         
 
     @staticmethod
     def dist(x,y):
         return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
-
-
-    @staticmethod
-    def mkHyperbola(F1,F2,D):
-        return lambda x,y: (Hyperbola.dist((x,y),F1)-Hyperbola.dist((x,y),F2)-D)
-    
-
-    @staticmethod
-    def mkLine(A,B,C):
-        return lambda x,y: A*x+B*y-C
 
 
     def __init__(self,ax,F1,F2,vObj, psiObj,nPts=100, **kwargs):
@@ -40,30 +70,8 @@ class Hyperbola(matplotlib.lines.Line2D):
 
         
         vv = self.getCoords()    
-        print F1[0], F2[0]
         matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)
 
-
-    def getCoordsOld(self):
-        xmin,xmax=self.xlim
-        ymin,ymax=self.ylim
-
-        self.hyperbola=self.mkHyperbola(self.F1,self.F2,self.D)
-        A=np.linspace(xmin,xmax,self.nPts)
-        B=np.linspace(ymin,ymax,self.nPts)
-        X,Y=np.meshgrid(A,B)
-        
-        #get contour
-        print X.shape,Y.shape
-        contour = matplotlib.contour.ContourSet(self.ax,X, Y, self.hyperbola(X,Y), 0, zdir='z',alpha=0)
-
-        p = contour.collections[0].get_paths()[0]
-        del contour
-        
-        v = p.vertices
-        return v
-#        global gX,gY
-#        gX,gY = X,Y
 
     def getCoords(self):
 
@@ -105,6 +113,10 @@ class Hyperbola(matplotlib.lines.Line2D):
             self.psi = psi
         self.D = self.vObj.v * self.psi
         
+        if self.F1.cluster == self.F2.cluster:
+            self.set_visible(True)
+        else:
+            self.set_visible(False)
 #        print "PREH", type(self.F1)
 #        print "HYPERREDRAW:",(self.F1[0],self.F1[1]), (self.F2[0],self.F2[1]) ,self.vObj.v * self.psi
         #then, update
@@ -114,18 +126,16 @@ class Hyperbola(matplotlib.lines.Line2D):
         self.set_ydata(v[:,1])
 
     def hide(self):
-        print "hide hyp",self.ax.figure.canvas
-        self.set_color("red")
         self.set_visible(False)
 
 
     def show(self):
-        if self.F1.is_active() and self.F2.is_active():
+        if self.F1.is_active() and self.F2.is_active() and \
+           self.F1.cluster == self.F2.cluster:
             print "hide hyp"
             self.set_visible(True)
 
     def on_press(self):
-        """called when we want to animate the line for moving"""
         self.set_animated(True)
 
     def on_release(self):
