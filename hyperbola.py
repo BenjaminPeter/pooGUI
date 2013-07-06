@@ -10,7 +10,7 @@ class LineBase(matplotlib.lines.Line2D):
     def dist(x,y):
         return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
 
-    def __init__(self,ax, F1, F2, psiObj, **kwargs):
+    def __init__(self, F1, F2, psiObj, **kwargs):
         if F1[0] > F2[0] or (F1[0] == F2[0] and F1[1] > F2[1]):
             self.F1, self.F2 = self.F2, self.F1
         self.F1 = F1
@@ -19,7 +19,6 @@ class LineBase(matplotlib.lines.Line2D):
         self.psiObj = psiObj
         psi=psiObj[self.F1.pop,self.F2.pop]
 
-        self.ax = ax
 
         vv = self.getCoords()    
         matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)
@@ -53,7 +52,7 @@ class Hyperbola(matplotlib.lines.Line2D):
         return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
 
 
-    def __init__(self,ax,F1,F2,vObj, psiObj,nPts=100, **kwargs):
+    def __init__(self,F1,F2,vObj, psiObj,nPts=100, **kwargs):
         self.F1 = F1
         #self.F1.hyperbolas.append(self)
         self.F2 = F2
@@ -66,7 +65,6 @@ class Hyperbola(matplotlib.lines.Line2D):
         self.psi=psiObj[self.F1.pop, self.F2.pop]
         self.D = vObj.v*self.psi
         self.nPts = nPts
-        self.ax = ax
 
         
         vv = self.getCoords()    

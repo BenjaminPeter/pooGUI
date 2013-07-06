@@ -5,13 +5,26 @@ from options import O
 from SampleFrame import ClusterFrame,Cluster
 
 
+class Sample(Population):
+    """
+        the sample class, which represents the data present in a sample
+    """
+    def __init__(self, data, *args, **kwargs):
+        Population.__init__(self, *args, **kwargs)
+        self.data = data
+        self.stats = dict()
+
+    def add_stat(self, stat):
+        pass
+
 class SampleUI(tk.Frame):
     sortStat = 'name'
     """this class represens a single sample with use checkbox, label, x and y coords"""
-    def __init__(self, master=None, main=None, cluster=None,text="Sample",x=0,y=0, **kwargs):
+    def __init__(self, master=None, config=None, data=None, cluster=None,text="Sample",x=0,y=0, **kwargs):
         tk.Frame.__init__(self,master, bd=2, **kwargs)
         self.cluster = None
-        self.main = main
+        self.c = config
+        self.d = data
         self.color = "red"
         self.cstr = "red"
         
@@ -81,7 +94,7 @@ class SampleUI(tk.Frame):
     def set_cluster(self, cluster):
         if self.cluster is not None:
             self.cluster.remove_pop(self)
-        self.main.clusters.add(cluster)
+        self.d.add_cluster(cluster)
         self.cluster = cluster
         if hasattr(self, 'cluster_frame'):
             self.cluster_frame.set_mincol(cluster.mincol)
@@ -211,8 +224,6 @@ class SampleUI(tk.Frame):
 
         self.circH.figure.canvas.draw()
         self.circP.figure.canvas.draw()
-        if self.main is not None:
-            self.main.update_sample_order()
 
     def add_line(self,l):
         self.psi_lines.append(l)
@@ -240,11 +251,12 @@ class SampleUIWPop(SampleUI):
         simple subclass of SampleUI where x,y, name are replaced by 
         a Population object that can also be used for the class
     """
-    def __init__(self, pop, master=None, main=None, cluster=None):
+    def __init__(self, pop, master=None, data=None, config=None, cluster=None):
         x,y = pop.location[:2] # just use first two locs
         text = pop.name
         self.pop = pop
-        SampleUI.__init__(self,master, cluster=cluster, main=main,text=text, x=x, y=y)
+        SampleUI.__init__(self,master, data=data, config=config, 
+                          cluster=cluster, text=text, x=x, y=y)
         
 
     def get_x(self):
@@ -258,6 +270,15 @@ class SampleUIWPop(SampleUI):
 
     def get_name(self):
         return self.pop.name
+
+    def destroy(self):
+        tk.Frame.destroy(self)
+
+    def __hash__(self):
+        return self.pop.__hash__()
+
+    def __eq__(self,other):
+        return self.pop.__eq__(other)
 
 
 class InferredOrigin(SampleUI):

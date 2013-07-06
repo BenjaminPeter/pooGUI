@@ -18,18 +18,17 @@ class PWPsiLine(matplotlib.lines.Line2D):
         return lambda x,y: A*x+B*y-C
 
 
-    def __init__(self,ax,F1,F2, psiObj,weight=1, threshold=0, **kwargs):
+    def __init__(self,F1,F2, data,weight=1, threshold=0, **kwargs):
         """creates a pairwise psi line. the convention here is that the line is always left to right"""
         self.F1 = F1
         self.F2 = F2
+        self.d = data
         if self.F1[0] > self.F2[0] or \
            (self.F1[0] == self.F2[0] and self.F1[1] > self.F2[1]):
             self.F1, self.F2 = self.F2, self.F1
-        self.psiObj = psiObj
-        psi=psiObj[self.F1.pop,self.F2.pop]
+        psi=self.d.get_default_stat(self.F1.pop,self.F2.pop)
         self.weight = weight
         self.threshold = threshold
-        self.ax = ax
  
         vv = self.getCoords()    
         matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],
@@ -49,7 +48,7 @@ class PWPsiLine(matplotlib.lines.Line2D):
             print "%f>%f or %f>%f"%(self.F1[0], self.F2[0], self.F1[1], self.F2[1])
             print "SWITCH"
             self.F1, self.F2 = self.F2,self.F1
-            self.set_color( self.cols[ self.psiObj[self.F1.pop,self.F2.pop]>0] )
+            self.set_color( self.cols[ self.d.get_default_stat(self.F1.pop,self.F2.pop) >0])
 
         coords = np.array([[self.F1[0],self.F1[1]],
                            [self.F2[0],self.F2[1]]])
@@ -71,7 +70,7 @@ class PWPsiLine(matplotlib.lines.Line2D):
 
         if self.F1[0] > self.F2[0]:
             self.F1, self.F2 = self.F2,self.F1
-            self.set_color( self.cols[ self.psiObj[self.F1.pop,self.F2.pop]>0] )
+            self.set_color( self.cols[ self.d.get_default_stat(self.F1.pop,self.F2.pop)>0] )
 
         if threshold is not None:
             self.threshold = threshold
@@ -91,7 +90,6 @@ class PWPsiLine(matplotlib.lines.Line2D):
         self.set_visible ( visible )
         #print "LINEREDRAW: psi: %s, weight: %s (%s) threshold %s"%(visible, self.weight, 0, self.threshold)
         #then, update
-#        background = canvas.copy_from_bbox(self.ax.bbox)
         v = self.getCoords()
         self.set_xdata(v[:,0])
         self.set_ydata(v[:,1])
