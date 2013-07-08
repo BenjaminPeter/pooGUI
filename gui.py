@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python
 import matplotlib
 import sys
 matplotlib.use('TkAgg')
