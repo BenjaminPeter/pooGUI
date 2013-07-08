@@ -229,8 +229,11 @@ class PooGUI(tk.Frame):
 
         if f is None:
             f = tkFileDialog.askopenfile(mode='r',initialfile="coords.txt")
+	    print f
+	else:
+	    f = open( f )
 
-        for i,line in enumerate(open(f)):
+        for i,line in enumerate(f):
             p = Population()
             p.load_line(line)
 
@@ -464,13 +467,13 @@ root = tk.Tk()
 
 app = PooGUI(root)
 #load some data
-app.loadCoords("data.test2.loc")
-app.loadPsi("data.test.psi")
-app.loadBGI("ch.png")
+app.loadCoords("examples/data.test2.loc")
+app.loadPsi("examples/data.test.psi")
+app.loadBGI("examples/ch.png")
 app.v = 100
 app.drawAllHyperbolas()
 app.drawAllPairwisePsi()
-e,mse,psi,data = app.optimizeAll()
+#e,mse,psi,data = app.optimizeAll()
 app.grid()
 tk.Grid.rowconfigure(root,0,weight=1)
 tk.Grid.rowconfigure(root,1,weight=1)
