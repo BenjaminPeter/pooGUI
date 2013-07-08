@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib.figure import Figure
 from PWPsiLine import PWPsiLine
+from hyperbola import Hyperbola
 
 class PlotCanvas(tk.Frame):
     """Class wrapping matplotlib canvas"""
@@ -13,7 +14,7 @@ class PlotCanvas(tk.Frame):
         self.fig = Figure(figsize=(5,5),dpi=200)
         self.panel = self.fig.add_subplot(111)
 
-        self.config = config
+        self.c = config
         self.xlim = config.xlim
         self.ylim = config.ylim
         self.panel.set_xlim(self.xlim)
@@ -65,8 +66,8 @@ class PlotCanvas(tk.Frame):
         except AttributeError:
             pass
         extent = [0,0,0,0]
-        extent[:2] = self.config.xlim
-        extent[2:4] = self.config.ylim
+        extent[:2] = self.c.xlim
+        extent[2:4] = self.c.ylim
         #aspect calculations: we want the user defined coordinates to be
         #xlim and ylim, and the aspect ratio to be defined by the bgi
         aspect=(extent[3] - extent[2]) / float((extent[1] - extent[0]))
@@ -138,7 +139,7 @@ class PWPCanvas(PlotCanvas):
             for s2 in self.samples[i+1:]:
                 print s1.get_x(), s2.get_x()
                 stat = self.d.get_default_stat(s1.name,s2.name)
-                l = PWPsiLine( s1, s2, self.d)
+                l = PWPsiLine( s1, s2, self.d, self.c)
                 s1.add_line(l)
                 s2.add_line(l)
                 self.pList.append(l)

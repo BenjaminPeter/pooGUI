@@ -10,15 +10,14 @@ class LineBase(matplotlib.lines.Line2D):
     def dist(x,y):
         return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
 
-    def __init__(self, F1, F2, psiObj, **kwargs):
-        if F1[0] > F2[0] or (F1[0] == F2[0] and F1[1] > F2[1]):
-            self.F1, self.F2 = self.F2, self.F1
+    def __init__(self, F1, F2, data, config, **kwargs):
         self.F1 = F1
         self.F2 = F2
+        if F1[0] > F2[0] or (F1[0] == F2[0] and F1[1] > F2[1]):
+            self.F1, self.F2 = self.F2, self.F1
 
-        self.psiObj = psiObj
-        psi=psiObj[self.F1.pop,self.F2.pop]
-
+        self.d = data
+        self.c = config
 
         vv = self.getCoords()    
         matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)

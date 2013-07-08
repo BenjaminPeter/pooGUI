@@ -2,41 +2,26 @@ import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.lines
 import numpy as np
+from hyperbola import LineBase
 
 
 
-class PWPsiLine(matplotlib.lines.Line2D):
+class PWPsiLine(LineBase):
     cols = ["black", "red"]
 
-    @staticmethod
-    def dist(x,y):
-        return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
 
-
-    @staticmethod
-    def mkLine(A,B,C):
-        return lambda x,y: A*x+B*y-C
-
-
-    def __init__(self,F1,F2, data,weight=1, threshold=0, **kwargs):
+    def __init__(self,F1,F2, data, config, **kwargs):
         """creates a pairwise psi line. the convention here is that the line is always left to right"""
-        self.F1 = F1
-        self.F2 = F2
-        self.d = data
-        if self.F1[0] > self.F2[0] or \
-           (self.F1[0] == self.F2[0] and self.F1[1] > self.F2[1]):
-            self.F1, self.F2 = self.F2, self.F1
-        psi=self.d.get_default_stat(self.F1.pop,self.F2.pop)
-        self.weight = weight
-        self.threshold = threshold
  
-        vv = self.getCoords()    
-        matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],
-            color = self.cols[psi>0],
-            linewidth = abs(psi * weight),
+        LineBase.__init__(self, F1, F2, data, config,
             **kwargs)
 
-        if abs(psi) * weight < threshold:
+        weight = self.c.psi_lwd
+        threshold = self.c.psi_threshold
+        psi = self.d.get_default_stat(F1.pop, F2.pop)
+        self.set_color(self.cols[psi>0])
+        self.set_lw(abs(psi * weight))
+        if abs(psi) * self.weight < threshold:
             self.set_visible(False)
 
         assert self.F1[0] < self.F2[0] or (self.F1[0] == self.F2[0] and self.F1[1] < self.F2[1])

@@ -53,6 +53,9 @@ class Data:
     def get_v(self, cluster=None):
         if cluster is None:
             return self.v
+    def set_v(self, v, cluster=None):
+        if cluster is None:
+            self.v = v
 
     def add_pop(self, pop):
         self.pops.append(pop)
@@ -520,7 +523,7 @@ app.loadCoords("examples/data.test2.loc")
 app.loadPsi("examples/data.test.psi")
 app.loadBGI("examples/ch.png")
 app.v = 100
-app.canvas['H'].draw_all_hyperbolas()
+#app.canvas['H'].draw_all_hyperbolas()
 app.canvas['Psi'].draw_all_pairwise_psi()
 #e,mse,psi,data = app.optimizeAll()
 app.grid()
