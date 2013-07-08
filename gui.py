@@ -516,9 +516,9 @@ root = tk.Tk()
 
 app = PooGUI(root)
 #load some data
-app.loadCoords("data.test2.loc")
-app.loadPsi("data.test.psi")
-app.loadBGI("ch.png")
+app.loadCoords("examples/data.test2.loc")
+app.loadPsi("examples/data.test.psi")
+app.loadBGI("examples/ch.png")
 app.v = 100
 #app.canvas['H'].draw_all_hyperbolas()
 app.canvas['Psi'].draw_all_pairwise_psi()
