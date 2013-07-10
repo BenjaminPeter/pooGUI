@@ -22,7 +22,7 @@ class SampleUI(tk.Frame):
     """this class represens a single sample with use checkbox, label, x and y coords"""
     def __init__(self, master=None, config=None, data=None, cluster=None,text="Sample",x=0,y=0, **kwargs):
         tk.Frame.__init__(self,master, bd=2, **kwargs)
-        self.cluster = None
+        self.cluster = cluster
         self.c = config
         self.d = data
         self.color = "red"
@@ -72,7 +72,9 @@ class SampleUI(tk.Frame):
 
         if cluster != None:
             cluster.add_pop(self)
-            self.cluster_frame = ClusterFrame(self,self.cluster)
+            self.cluster_frame = ClusterFrame(parent=self,
+                                              data=self.d,
+                                              config=self.c)
             self.cluster_frame.grid(in_=self,column=4,row=0)
 
 
@@ -80,7 +82,6 @@ class SampleUI(tk.Frame):
         self.psi_lines = []
 
     def set_color(self, color):
-
         self.color = color
         cint = [min(255,c *256) for c in color]
         cstr =  '#%02x%02x%02x'%tuple(cint[:3])
@@ -92,13 +93,10 @@ class SampleUI(tk.Frame):
         self.circP.set_color(color)
 
     def set_cluster(self, cluster):
-        if self.cluster is not None:
-            self.cluster.remove_pop(self)
-        self.d.add_cluster(cluster)
         self.cluster = cluster
         if hasattr(self, 'cluster_frame'):
-            self.cluster_frame.set_mincol(cluster.mincol)
-            self.cluster_frame.set_maxcol(cluster.maxcol)
+            self.cluster_frame.set_mincol(cluster.col.mincol)
+            self.cluster_frame.set_maxcol(cluster.col.maxcol)
 
     def is_active(self):
         return self.active.get()
@@ -206,11 +204,11 @@ class SampleUI(tk.Frame):
 
     def updateHyperbolas(self):
         for h in self.hyperbolas:
-            h.hupdate()
+            h.update_()
 
     def updatePsiLines(self):
         for l in self.psi_lines:
-            l.pupdate()
+            l.update_()
 
     def updateCircles(self):
         self.circH._update()
@@ -240,8 +238,8 @@ class SampleUI(tk.Frame):
 
     def __lt__(self, other):
         if self.cluster == other.cluster:
-            return self.stats[SampleUI.sortStat] < \
-                    other.stats[SampleUI.sortStat]
+            return self.d.get_default_sort_stat(self.pop) < \
+                    self.d.get_default_sort_stat(other.pop)
         else: 
             return self.cluster < other.cluster
 

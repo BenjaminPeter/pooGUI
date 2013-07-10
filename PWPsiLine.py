@@ -21,11 +21,10 @@ class PWPsiLine(LineBase):
         psi = self.d.get_default_stat(F1.pop, F2.pop)
         self.set_color(self.cols[psi>0])
         self.set_lw(abs(psi * weight))
-        if abs(psi) * self.weight < threshold:
+        if abs(psi) * weight < threshold:
             self.set_visible(False)
 
         assert self.F1[0] < self.F2[0] or (self.F1[0] == self.F2[0] and self.F1[1] < self.F2[1])
-
 
     def getCoords(self):
         if self.F1[0] > self.F2[0] or \
@@ -42,9 +41,10 @@ class PWPsiLine(LineBase):
            (self.F1[0] == self.F2[0] and self.F1[1] < self.F2[1])
         return coords
 
-
-
-    def pupdate(self,F1=None, F2=None,  weight=None, threshold=None):
+    def update_(self,F1=None, F2=None):
+        """
+        updates the plot and all lines. If F1, F2 are passed they are updated as well, otherwise the config element is used
+        """
 
         visible = self.get_visible( )
         # first, update everything
@@ -57,14 +57,10 @@ class PWPsiLine(LineBase):
             self.F1, self.F2 = self.F2,self.F1
             self.set_color( self.cols[ self.d.get_default_stat(self.F1.pop,self.F2.pop)>0] )
 
-        if threshold is not None:
-            self.threshold = threshold
-        if weight is not None:
-            self.weight = weight
-        if weight is not None or threshold is not None:
-            self.set_linewidth(self.weight * self.psiObj[self.F1.pop, self.F2.pop])
+        psi = self.d.get_default_stat(self.F1, self.F2)
+        self.set_linewidth(self.c.psi_lwd * psi)
 
-        if self.weight * abs(self.psiObj[self.F1.pop,self.F2.pop]) > threshold \
+        if self.c.psi_lwd * abs(psi) > self.c.psi_threshold \
            and self.F1.is_active() and self.F2.is_active():
             visible = True
         else:
@@ -79,26 +75,5 @@ class PWPsiLine(LineBase):
         self.set_xdata(v[:,0])
         self.set_ydata(v[:,1])
 
-
-    def hide(self):
-        self.set_visible(False)
-
-
-    def show(self):
-        if self.F1.is_active() and self.F2.is_active():
-            print "show psi"
-            self.set_visible(True)
-
-    def on_press(self):
-        """called when we want to animate the line for moving"""
-        self.set_animated(True)
-
-    def on_release(self):
-        self.set_animated(False)
-
-    def on_motion(self):
-        v = self.getCoords()
-        self.set_xdata(v[:,0])
-        self.set_ydata(v[:,1])
 
         

@@ -21,6 +21,11 @@ O['hyperbola_color'] = 'black'
 O['psi_lwd'] = 4
 O['psi_threshold'] = 0
 
+#options for hyperbola plot
+O['hyp_npts'] = 100 # the number of points of the hyperbola
+O['hyp_min_e'] = 0 # max eccentricity s.t. the hyperbola is displayed NYI!!!
+O['hyp_lwd'] = 1 # line width of hyperbola
+
 #the starting point for v, x and y to find the origin of the range expansion
 O['opt_start'] = [100,40,40]
 

@@ -36,7 +36,7 @@ class SimpleTable(tk.Frame):
             self.columnconfigure(0, weight=1)
             self.rowconfigure(0, weight=1)
 
-        self.initMenubar()
+        #self.initMenubar()
 
     def set(self, row, column, value):
         widget = self._widgets[row][column]

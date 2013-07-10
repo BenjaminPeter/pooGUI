@@ -78,14 +78,12 @@ class HyperbolaCanvas(PlotCanvas):
         the canvas for the hyperbola plot, also keeps all the actual
         hyperbola objects
     """
-    def __init__(self, master, config, guibase, samples, data, **kwargs):
+    def __init__(self, master, config, samples, data, **kwargs):
         """
-            guibase is the master gui
             samples is a list of all the samples that are present
             statObj is the object that will produce the stats
         """
         PlotCanvas.__init__(self,master,config,**kwargs)
-        self.guibase = guibase
         self.samples = samples
         self.d = data
         self.hList = []
@@ -93,7 +91,7 @@ class HyperbolaCanvas(PlotCanvas):
     def draw_all_hyperbolas(self):
         for i, s1 in enumerate(self.samples):
             for s2 in self.samples[i+1:]:
-                h = Hyperbola(s1, s2, self.d)
+                h = Hyperbola(s1, s2, self.d, self.c)
                 s1.add_hyperbola(h)
                 s2.add_hyperbola(h)
                 self.hList.append(h)
@@ -103,7 +101,7 @@ class HyperbolaCanvas(PlotCanvas):
         if self.visible:
             self.redraw()
 
-    def update_hyperbolas(self):
+    def update_(self):
         for h in self.hList:
             h.update_()
     
@@ -112,20 +110,18 @@ class PWPCanvas(PlotCanvas):
         the canvas for the pairwise psi plot, also keeps all the actual
         hyperbola objects
     """
-    def __init__(self, master, config, guibase, samples, data, **kwargs):
+    def __init__(self, master, config, samples, data, **kwargs):
         """
-            guibase is the master gui
             samples is a list of all the samples that are present
             statObj is the object that will produce the stats
         """
         PlotCanvas.__init__(self,master,config,**kwargs)
-        self.guibase = guibase
 
         self.samples = samples
         self.d = data
         self.pList = []
 
-    def update_psi_lines(self):
+    def update_(self):
         for l in self.pList:
             l.update_()
 
@@ -137,7 +133,6 @@ class PWPCanvas(PlotCanvas):
         """
         for i, s1 in enumerate(self.samples):
             for s2 in self.samples[i+1:]:
-                print s1.get_x(), s2.get_x()
                 stat = self.d.get_default_stat(s1.name,s2.name)
                 l = PWPsiLine( s1, s2, self.d, self.c)
                 s1.add_line(l)

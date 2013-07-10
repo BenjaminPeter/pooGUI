@@ -22,8 +22,6 @@ class LineBase(matplotlib.lines.Line2D):
         vv = self.getCoords()    
         matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)
 
-
-
     def hide(self):
         self.set_visible(False)
 
@@ -43,35 +41,18 @@ class LineBase(matplotlib.lines.Line2D):
         v = self.getCoords()
         self.set_xdata(v[:,0])
         self.set_ydata(v[:,1])
-class Hyperbola(matplotlib.lines.Line2D):
-        
 
-    @staticmethod
-    def dist(x,y):
-        return np.sqrt((x[0]-y[0])**2+(x[1]-y[1])**2)
+class Hyperbola(LineBase):
 
+    def __init__(self,F1,F2,data, config, **kwargs):
 
-    def __init__(self,F1,F2,vObj, psiObj,nPts=100, **kwargs):
-        self.F1 = F1
-        #self.F1.hyperbolas.append(self)
-        self.F2 = F2
-        #self.F2.hyperbolas.append(self)
-        #vObj is the object e.g. PooGui, whose property v is the
-        #multiplier for psi
-        self.vObj = vObj
-        if F1[0] > F2[0] or (F1[0] == F2[0] and F1[1] > F2[1]):
-            self.F1, self.F2 = self.F2, self.F1
-        self.psi=psiObj[self.F1.pop, self.F2.pop]
-        self.D = vObj.v*self.psi
-        self.nPts = nPts
-
-        
-        vv = self.getCoords()    
-        matplotlib.lines.Line2D.__init__(self,vv[:,0],vv[:,1],**kwargs)
+        psi = data.get_default_stat(F1.pop, F2.pop)
+        v = data.get_v()
+        self.D = v * psi
+        LineBase.__init__(self,F1,F2,data, config,**kwargs)
 
 
     def getCoords(self):
-
         a = self.D/2
         c = self.dist(self.F1, self.F2)/2
         b = np.sqrt(c*c - a*a)
@@ -82,7 +63,8 @@ class Hyperbola(matplotlib.lines.Line2D):
         else:
             alpha = np.pi/2
 
-        t = np.arange(-2*np.pi, 2*np.pi,0.1)
+        step_size = 4.*np.pi/self.c.hyp_npts
+        t = np.arange(-2*np.pi, 2*np.pi,step_size)
         x = a * np.cosh(t)
         y = b * np.sinh(t)
 
@@ -97,18 +79,15 @@ class Hyperbola(matplotlib.lines.Line2D):
 
         return coordsRot
 
-
-
-
-    def hupdate(self,F1=None, F2=None,psi=None):
+    def update_(self,F1=None, F2=None):
         # first, update everything
         if F1 is not None:
             self.F1 = F1
         if F2 is not None:
             self.F2 = F2
-        if psi is not None:
-            self.psi = psi
-        self.D = self.vObj.v * self.psi
+        psi = self.d.get_default_stat(self.F1.pop, self.F2.pop)
+        v = self.d.get_v()
+        self.D = v * psi
         
         if self.F1.cluster == self.F2.cluster:
             self.set_visible(True)
@@ -121,27 +100,7 @@ class Hyperbola(matplotlib.lines.Line2D):
         v = self.getCoords()
         self.set_xdata(v[:,0])
         self.set_ydata(v[:,1])
-
-    def hide(self):
-        self.set_visible(False)
-
-
-    def show(self):
-        if self.F1.is_active() and self.F2.is_active() and \
-           self.F1.cluster == self.F2.cluster:
-            print "hide hyp"
-            self.set_visible(True)
-
-    def on_press(self):
-        self.set_animated(True)
-
-    def on_release(self):
-        self.set_animated(False)
-
-    def on_motion(self):
-        v = self.getCoords()
-        self.set_xdata(v[:,0])
-        self.set_ydata(v[:,1])
+        self.set_lw(self.c.hyp_lwd)
 
 if False:
     fig = plt.figure()

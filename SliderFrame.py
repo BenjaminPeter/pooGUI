@@ -39,7 +39,7 @@ class SliderFrame(tk.Frame):
         self.lwdI.trace("w",lambda a,b,c,n=self.lwd_scale:main.changeLwd(n))
         self.tI.trace("w",lambda a,b,c,n=self.threshold_scale:main.changeThreshold(n))
         self.v_scale.grid(column=0,row=0)
-        self.npop_scale.grid(column=0,row=1)
+#        self.npop_scale.grid(column=0,row=1)
         self.lwd_scale.grid(column=0,row=2)
         self.threshold_scale.grid(column=0,row=3)
 

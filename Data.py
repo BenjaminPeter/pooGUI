@@ -106,7 +106,10 @@ def psi_sum_cluster(pw_psi, sList):
             if s1.cluster == s2.cluster:
                 psi[s1.pop] += pw_psi[s1.pop, s2.pop]
                 psi[s2.pop] -= pw_psi[s1.pop, s2.pop]
-            else: print s1.cluster, s2.cluster
+            else: 
+                psi[s1.pop] += 0
+                psi[s2.pop] += 0
+            #print s1.cluster, s2.cluster
     return dict(psi)
 
 
