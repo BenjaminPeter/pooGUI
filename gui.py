@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import matplotlib
 import sys
 import argparse as ap
@@ -494,8 +495,11 @@ class PooGUI(tk.Frame):
 
         if f is None:
             f = tkFileDialog.askopenfile(mode='r',initialfile="coords.txt")
+	    print f
+	else:
+	    f = open( f )
 
-        for i,line in enumerate(open(f)):
+        for i,line in enumerate(f):
             p = Population()
             p.load_line(line)
             self.d.add_pop(p)
